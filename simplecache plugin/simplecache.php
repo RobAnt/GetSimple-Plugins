@@ -2,7 +2,7 @@
 /*
 Plugin Name: SimpleCache
 Description: a simple cache
-Version: 0.1
+Version: 0.2
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */

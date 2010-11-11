@@ -23,7 +23,7 @@ register_plugin(
 );
 
 # activate filter
-add_action('changedata-save','simplecache_flush'); 
+add_action('changedata-save','simplecache_flushpage'); 
 add_action('index-pretemplate','simplecache_pagestart'); 
 add_action('index-posttemplate','simplecache_pageend'); 
 
@@ -33,7 +33,7 @@ function simplecache_flush()
 {
   $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
   if (is_dir($simplecache_dir))
-    {
+  {
     $dir_handle = @opendir($simplecache_dir) or exit('Unable to open the folder .../data/other/simplecache_cache, check the folder privileges.');
     $filenames = array();
 
@@ -55,44 +55,69 @@ function simplecache_flush()
   }
 }
 
-/* start of page */
-function simplecache_pagestart() 
+/* flush one page from cache when edited */
+function simplecache_flushpage() 
 {
   $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
   if (is_dir($simplecache_dir))
   {
-    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
+    $simplecache_file = $simplecache_dir . $_POST['post-id'] . ".cache";
     if (file_exists($simplecache_file)) 
     {
-      // use cached file
-      include($simplecache_file); 
-      // and stop running scripts
-      exit;
+      unlink($simplecache_file) or exit('Unable to clean up the folder .../data/other/simplecache_cache, check folder content privileges.');
     }
   }
-  if(!ob_start("ob_gzhandler")) ob_start();
+}
+
+/* start of page */
+function simplecache_pagestart() 
+{
+  // check for pages to not cache
+  if(!in_array(return_page_slug(), array("404")))
+  {  
+    $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
+    if (is_dir($simplecache_dir))
+    {
+//    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
+      $simplecache_file = $simplecache_dir . return_page_slug() . ".cache";
+      if (file_exists($simplecache_file)) 
+      {
+        // use cached file
+        include($simplecache_file); 
+        // and stop running scripts
+        exit;
+      }
+    }
+
+    if(!ob_start("ob_gzhandler")) ob_start();
+  }
 }
 
 /* end of page */
 function simplecache_pageend() 
 {
-  $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
-  if (is_dir($simplecache_dir)==false)
+  // check for pages to not cache
+  if(!in_array(return_page_slug(), array("404")))
   {
-    mkdir($simplecache_dir, 0755) or exit('Unable to create .../data/other/simplecache_cache folder, check GetSimple privileges.');
+    $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
+    if (is_dir($simplecache_dir)==false)
+    {
+      mkdir($simplecache_dir, 0755) or exit('Unable to create .../data/other/simplecache_cache folder, check GetSimple privileges.');
+    }
+  
+    if (is_dir($simplecache_dir))
+    {
+//    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
+      $simplecache_file = $simplecache_dir . return_page_slug() . ".cache";
+      // open the cache file for writing
+      $fp = fopen($simplecache_file, 'w') or exit('Unable to save ' . $simplecache_file . ', check GetSimple privileges.');
+      // save the contents of output buffer to the file
+      fwrite($fp, ob_get_contents());
+      // close the file
+      fclose($fp);
+    }
+    // Send the output to the browser
+    ob_end_flush();
   }
-  if (is_dir($simplecache_dir))
-  {
-    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
-    // open the cache file "cache/home.html" for writing
-    $fp = fopen($simplecache_file, 'w') or exit('Unable to save ' . $simplecache_file . ', check GetSimple privileges.');
-    // save the contents of output buffer to the file
-    fwrite($fp, ob_get_contents());
-    // close the file
-    fclose($fp);
-  }
-  // Send the output to the browser
-  ob_end_flush();
 }
-
 ?>

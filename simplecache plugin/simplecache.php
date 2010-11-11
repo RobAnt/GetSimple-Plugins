@@ -2,7 +2,7 @@
 /*
 Plugin Name: SimpleCache
 Description: a simple cache
-Version: 0.2
+Version: 0.3
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
 	$thisfile, 
 	'SimpleCache', 	
-	'0.2', 		
+	'0.3', 		
 	'Rob Antonishen',
 	'http://ffaat.poweredbyclear.com/', 
 	'A simple cache for Get Simple',
@@ -31,7 +31,7 @@ add_action('pages-sidebar','createSideMenu',array($thisfile,'SimpleCache Status'
 // functions
 
 /* clear the simplecache directory */
-function simplecache_flush() 
+function simplecache_flushall() 
 {
   $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
   if (is_dir($simplecache_dir))
@@ -57,11 +57,11 @@ function simplecache_flush()
   }
 }
 
-/* flush one page from cache when edited */
+/* flush one page from cache when edited - pass in md5 hash of page slug*/
 function simplecache_flushpage($page=NULL) 
 {
   $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
-  if ($page === null) $page = $_POST['post-id'];
+  if ($page === null) $page = md5($_POST['post-id']);
   if (is_dir($simplecache_dir))
   {
     $simplecache_file = $simplecache_dir . $page . ".cache";
@@ -81,8 +81,7 @@ function simplecache_pagestart()
     $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
     if (is_dir($simplecache_dir))
     {
-//    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
-      $simplecache_file = $simplecache_dir . return_page_slug() . ".cache";
+      $simplecache_file = $simplecache_dir .  md5(return_page_slug()) . ".cache";
       if (file_exists($simplecache_file)) 
       {
         // use cached file
@@ -110,8 +109,7 @@ function simplecache_pageend()
   
     if (is_dir($simplecache_dir))
     {
-//    $simplecache_file = $simplecache_dir .  md5($_SERVER['REQUEST_URI']) . ".cache";
-      $simplecache_file = $simplecache_dir . return_page_slug() . ".cache";
+      $simplecache_file = $simplecache_dir .  md5(return_page_slug()) . ".cache";
       // open the cache file for writing
       $fp = fopen($simplecache_file, 'w') or exit('Unable to save ' . $simplecache_file . ', check GetSimple privileges.');
       // save the contents of output buffer to the file
@@ -124,6 +122,45 @@ function simplecache_pageend()
   }
 }
 
+/* get list of page titles and slugs and the slug hash */
+function simplecache_pagelist() {
+  $path=GSDATAPAGESPATH;
+  $data=''; 
+  
+  $count=0;
+  $pagelist= array(); 
+  if (is_dir($path))
+  {
+    if ($dh = opendir($path))
+    {
+      while (($file = readdir($dh)) !== false)
+      {
+        if($file!="." AND $file!=".." AND $file!=".htaccess")
+        {
+          $pathtofile="$path$file";            
+          $da = @fopen($pathtofile,"r");
+          $data=getXML($pathtofile);  
+          
+          $node=$data->children();
+          $pagelist[$count]['slug'] = (string)$node->url;
+          $pagelist[$count]['menu'] = (string)$node->menu;
+          $pagelist[$count]['title'] = (string)$node->title;
+          $pagelist[$count]['hash'] = md5((string)$node->url);
+          
+          $count++;
+
+          @fclose($da);
+        }
+      }  
+      closedir($dh);
+    }
+  }
+  
+  $pagelist= subval_sort($pagelist,'title');
+  
+  return($pagelist); 
+}
+
 function simplecache_manage()
 {
   echo '<label>SimpleCache</label><br/><br/>';
@@ -134,7 +171,7 @@ function simplecache_manage()
     // cache flush requested
     if ((isset($_GET['cache_flush'])) && ($_GET['cache_flush'] == "Y"))
     {
-      simplecache_flush();
+      simplecache_flushall();
     }
  
     // single cache file delete requested
@@ -143,6 +180,9 @@ function simplecache_manage()
       simplecache_flushpage($_GET['cache_flushpage']);
     }
         
+        
+    $pagearray = simplecache_pagelist();
+    
     $pcount = 0;
     $dir_handle = @opendir($simplecache_dir) or exit('Unable to open the folder .../data/other/simplecache_cache, check the folder privileges.');
     $filenames = array();
@@ -154,41 +194,43 @@ function simplecache_manage()
 
     echo '<table class="edittable highlight paginate">';   
     echo '<tr id="tr-header" >';
-    echo '<th width="35%" ><b>Cache File</b></th>';
-    echo '<th><span>Created On</span></th>';
-    echo '<th width="10%"></th>';
+    echo '<th width="50%" >Page</th>';
+    echo '<th><span>Cache File Date</span></th>';
+    echo '<th width="10px"></th>';
     echo "</tr>\n";       
     
-    if (count($filenames) != 0)
+    //display each page and its cache status
+    if (count($pagearray) != 0)
     {
-      foreach ($filenames as $file) 
+      foreach ($pagearray as $pagedata) 
       {
-        if (!($file == '.' || $file == '..' || is_dir($simplecache_dir.$file) || $file == '.htaccess'))
+        echo '<tr>';
+        echo '<td width="50%" >' . $pagedata['title'] . '</td>';
+
+        $simplecache_file = $simplecache_dir . $pagedata['hash'] . ".cache";
+        if (file_exists($simplecache_file)) 
         {
-          $file = substr($file, 0, -6); //strip the extension
-          echo '<tr id="tr-' . $pcount . '" >';
-          echo '<td width="35%" ><b>' . $file . '</b></td>';
-          echo '<td>' . date("F d Y H:i:s", filemtime($simplecache_dir.$file.".cache")) . '</td>';
-          echo '<td width="10%"><b><a href="' . $_SERVER["REQUEST_URI"] . '&cache_flushpage=' . $file . '">Delete</a></b></td>';
-          echo "</tr>\n";   
-          
+          echo '<td>' . date("F d Y H:i:s", filemtime($simplecache_file)) . '</td>';
+          echo '<td class="delete" width="10px"><b><a href="' . $_SERVER["REQUEST_URI"] . '&cache_flushpage=' . $pagedata['hash'] . '" title="Delete Page Cache">X</a></b></td>';
           $pcount++;     
         }
+        else
+        {
+          echo '<td>Not Cached.</td><td width="10px"></td>';
+        }
+
+        echo "</tr>\n";   
+          
       }
     }
-    closedir($dir_handle);
-    
-    if($pcount == 0)
-    {
-      echo "<tr><td>No Cached files</td></tr>\n";
-    }
-  
+    closedir($dir_handle); 
     echo "</table>\n";
 
     if($pcount != 0)
     {
       echo '<br/><a href="'.$_SERVER["REQUEST_URI"].'&cache_flush=Y">Delete all cache files</a>';
     }
+    
   } 
   else 
   {

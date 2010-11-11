@@ -28,6 +28,7 @@ add_action('index-pretemplate','simplecache_pagestart');
 add_action('index-posttemplate','simplecache_pageend'); 
 add_action('pages-sidebar','createSideMenu',array($thisfile,'SimpleCache Status'));
 
+
 // functions
 
 /* clear the simplecache directory */
@@ -98,8 +99,11 @@ function simplecache_pagestart()
 /* end of page */
 function simplecache_pageend() 
 {
+  // get config variables
+  $config = simplecache_getconf(); 
+
   // check for pages to not cache
-  if(!in_array(return_page_slug(), array("404")))
+  if(!in_array(return_page_slug(), array_merge(array("404"), $config['nocache'])))
   {
     $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
     if (is_dir($simplecache_dir)==false)
@@ -161,8 +165,57 @@ function simplecache_pagelist() {
   return($pagelist); 
 }
 
+
+/* get config settings */
+function simplecache_getconf()
+{
+  $vals=array();
+  $configfile=GSDATAOTHERPATH."simplecache.xml";
+  if (!file_exists($configfile))
+  {
+    //default settings
+    $xmlstr = "<?xml version='1.0'?><simplecachesettings><ttl>60</ttl><nocache></nocache></simplecachesettings>";
+ 
+    $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
+    // save the contents of output buffer to the file
+    fwrite($fp, $xmlstr);
+    // close the file
+    fclose($fp);
+  }
+
+  $xmlvals = getXML($configfile);
+
+  $node = $xmlvals->children();
+
+  $vals['ttl'] = (int)(string)$node->ttl;  
+  $subnode = $node->nocache->children();
+  
+  $vals['nocache'] = array();
+  foreach($subnode->slug as $slug) 
+    $vals['nocache'][] = (string)$slug;
+
+  return($vals);
+}
+
+/* set config settings */
+function simplecache_setconf($vals)
+{
+  $configfile=GSDATAOTHERPATH."simplecache.xml";
+  $xmlvals = xml_encode($vals , false, "simplecache-config");
+
+  $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
+  // save the contents of output buffer to the file
+  fwrite($fp, $xmlvals);
+  // close the file
+  fclose($fp);
+}
+
+
 function simplecache_manage()
 {
+  // get config variables
+  $config = simplecache_getconf(); 
+ 
   echo '<label>SimpleCache</label><br/><br/>';
 
   $simplecache_dir = GSDATAOTHERPATH.'simplecache_cache/';
@@ -181,6 +234,7 @@ function simplecache_manage()
     }
         
         
+    // display cache page data
     $pagearray = simplecache_pagelist();
     
     $pcount = 0;
@@ -191,13 +245,16 @@ function simplecache_manage()
     {
       $filenames[] = $filename;
     }
-
+    
+    //set up form to disable specific page caching
+    echo '<form class="manyinputs" action="load.php?id=simplecache" method="post">';
     echo '<table class="edittable highlight paginate">';   
     echo '<tr id="tr-header" >';
+    echo '<th align="center" width="30px">Cache</th>';
     echo '<th width="50%" >Page</th>';
     echo '<th><span>Cache File Date</span></th>';
     echo '<th width="10px"></th>';
-    echo "</tr>\n";       
+    echo "</tr>\n";
     
     //display each page and its cache status
     if (count($pagearray) != 0)
@@ -205,6 +262,9 @@ function simplecache_manage()
       foreach ($pagearray as $pagedata) 
       {
         echo '<tr>';
+        echo '<td align="center" width="30px"><input type= "checkbox" name = "cache" value = "' . $pagedata['slug'] . '"';
+        if (!in_array($pagedata['slug'], $config['nocache'])) echo ' checked';
+        echo '></td>';
         echo '<td width="50%" >' . $pagedata['title'] . '</td>';
 
         $simplecache_file = $simplecache_dir . $pagedata['hash'] . ".cache";
@@ -216,7 +276,7 @@ function simplecache_manage()
         }
         else
         {
-          echo '<td>Not Cached.</td><td width="10px"></td>';
+          echo '<td>Not in cache.</td><td width="10px"></td>';
         }
 
         echo "</tr>\n";   
@@ -225,11 +285,15 @@ function simplecache_manage()
     }
     closedir($dir_handle); 
     echo "</table>\n";
+    echo "<input name='submit' class='submit' type='submit' value='Update per-page settings'>\n";
 
+    //delete all cached pages button
     if($pcount != 0)
     {
-      echo '<br/><a href="'.$_SERVER["REQUEST_URI"].'&cache_flush=Y">Delete all cache files</a>';
+      echo "<input name='flush' class='submit' style='float: right;' type='button' value='Delete all cache files' ";
+      echo 'onclick="window.location.href=' . "'" . $_SERVER["REQUEST_URI"] . "&cache_flush=Y'" . '">';    
     }
+    echo "</form>\n";
     
   } 
   else 

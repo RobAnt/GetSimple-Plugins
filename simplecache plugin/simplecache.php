@@ -2,7 +2,7 @@
 /*
 Plugin Name: SimpleCache
 Description: a simple cache
-Version: 0.4
+Version: 0.5
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
 	$thisfile, 
 	'SimpleCache', 	
-	'0.4', 		
+	'0.5', 		
 	'Rob Antonishen',
 	'http://ffaat.poweredbyclear.com/', 
 	'A simple cache for Get Simple',
@@ -316,7 +316,7 @@ function simplecache_manage()
     }
 
     //disabled cache warning
-    if ($simplecache_conf['enabled']=="N") echo '<div style="display: block;" class="updated">SimpleCache page caching is currently disabled!</div>';
+    if ($simplecache_conf['enabled']=="N") echo '<div class="error" style="display: block;">SimpleCache page caching is currently disabled!</div>';
 
     if ($message!="") echo '<div style="display: block;" class="updated">' . $message . '</div>';
 
@@ -333,7 +333,7 @@ function simplecache_manage()
     
     //set up form to disable specific page caching
     echo '<form name="status" class="manyinputs" action="load.php?id=simplecache" method="post">';  
-    echo '<table class="edittable highlight paginate">';   
+    echo '<table class="edittable highlight">';   
     echo '<tr id="tr-header" >';
     echo '<th align="center" width="30px">Cache</th>';
     echo '<th width="50%" >Page</th>';
@@ -373,11 +373,13 @@ function simplecache_manage()
     echo "<input name='submit_perpage' class='submit' type='submit' value='Update per-page caching'>\n";
 
     //delete all cached pages button
-    if($pcount != 0)
+    echo "<input name='flush' class='submit' style='float: right;' type='button' value='Delete all cache files' ";
+    if($pcount == 0)
     {
-      echo "<input name='flush' class='submit' style='float: right;' type='button' value='Delete all cache files' ";
-      echo 'onclick="window.location.href=' . "'" . $_SERVER["REQUEST_URI"] . "&cache_flush=Y'" . '">';    
+      echo " disabled ";    
     }
+    echo 'onclick="window.location.href=' . "'" . $_SERVER["REQUEST_URI"] . "&cache_flush=Y'" . '">';
+    
     echo "</form>\n";
 
     // general plugin settings    

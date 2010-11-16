@@ -8,11 +8,11 @@ Author URI: http://ffaat.poweredbyclear.com/
 */
 
 // get correct id for plugin
-$thisfile=basename(__FILE__, ".php");
+$simplecache_thisfile=basename(__FILE__, ".php");
 
 // register plugin
 register_plugin(
-	$thisfile, 
+	$simplecache_thisfile, 
 	'SimpleCache', 	
 	'0.5', 		
 	'Rob Antonishen',
@@ -26,8 +26,8 @@ register_plugin(
 add_action('changedata-save','simplecache_flushpage'); 
 add_action('index-pretemplate','simplecache_pagestart'); 
 add_action('index-posttemplate','simplecache_pageend'); 
-add_action('pages-sidebar','createSideMenu',array($thisfile,'SimpleCache'));
-
+add_action('pages-sidebar','createSideMenu',array($simplecache_thisfile,'SimpleCache'));
+	
 // global vars
 $simplecache_conf = simplecache_loadconf();
 
@@ -43,7 +43,7 @@ function simplecache_pagestart()
   global $simplecache_conf;
   
   //caching enabled?
-  if($simplecache_conf['enabled']=="Y")
+  if ($simplecache_conf['enabled']=="Y")
   {  
     // check for pages to not cache
     if(!in_array(return_page_slug(), array_merge(array("404"), $simplecache_conf['nocache'])))
@@ -75,7 +75,7 @@ function simplecache_pageend()
   global $simplecache_conf;
   
   //caching enabled?
-  if($simplecache_conf['enabled']=="Y")
+  if ($simplecache_conf['enabled']=="Y")
   {
     // check for pages to not cache
     if(!in_array(return_page_slug(), array_merge(array("404"), $simplecache_conf['nocache'])))
@@ -91,6 +91,9 @@ function simplecache_pageend()
         $simplecache_file = $simplecache_dir .  md5(return_page_slug()) . ".cache";
         // open the cache file for writing
         $fp = fopen($simplecache_file, 'w') or exit('Unable to save ' . $simplecache_file . ', check GetSimple privileges.');
+        
+        echo "\n<!-- Page cached by SimpleCache on " . date("F d Y H:i:s", time()) . " -->";
+        
         // save the contents of output buffer to the file
         fwrite($fp, ob_get_contents());
         // close the file
@@ -244,7 +247,6 @@ function simplecache_loadconf()
 
   return($vals);
 }
-
 
 /***********************************************************************************
 *

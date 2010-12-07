@@ -24,7 +24,7 @@ register_plugin(
 
 // activate filter
 add_action('files-sidebar','createSideMenu',array($clientfiles_thisfile,'Client Files'));
-
+add_filter('content','clientfiles_display');
 
 /***********************************************************************************
 *
@@ -125,13 +125,37 @@ function clientfiles_manage()
     }    
     
     //handle client page data
-    if (isset($_GET['manageclient']))
+    if ((isset($_GET['manageclient'])) || (isset($_POST['submitfilenew'])))
     {
+
+      if (isset($_GET['manageclient']))
+      {
+        $client = urldecode($_GET['manageclient']);
+      }
+      elseif (isset($_POST['submitfilenew']))
+      {
+        $client = urldecode($_POST['client']);      
+      } 
+      
+      $client_dir = $clientfiles_dir . $client  . '/';
+      
+      //process file upload
+      if (isset($_POST['submitfilenew']))
+      {
+        $target_path = $client_dir . basename( $_FILES['uploadedfile']['name']); 
+        if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) 
+        {
+          echo "(The file ".  basename( $_FILES['uploadedfile']['name']). " has been uploaded.)<br>";
+        } 
+        else
+        {
+          echo "Error uploading the file, please try again!<br>";
+        } 
+      }       
+      
       //
       // display list of client files
-      //
-      $client = urldecode($_GET['manageclient']);
-      $client_dir = $clientfiles_dir . $client  . '/';
+      //      
 
       //delete a file
       if (isset($_GET['delfile']))
@@ -171,8 +195,14 @@ function clientfiles_manage()
       }
       echo '<hr>';
  
-// upload file code to go here
-
+      // File Upload form
+      echo '<form name="clientfilenew" enctype="multipart/form-data" action="load.php?id=clientfiles" method="post">';
+      echo '<input type="hidden" name="MAX_FILE_SIZE" value="10000000" />';
+      echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
+      echo 'Upload File: <input type="file" name="uploadedfile">&nbsp;&nbsp;';
+      echo '<input type="submit" name="submitfilenew" value="Upload File" />';
+      echo '</form>';    
+        
       echo '<hr>';     
       echo '<a href="load.php?id=clientfiles">Back to Client File Areas</a>';
 
@@ -223,5 +253,31 @@ function clientfiles_manage()
     // error message - no client file page created.
     echo "Folder .../data/other/clientfiles_cache doesn't exist!";
   }
+}
+
+/***********************************************************************************
+*
+* Frontend display
+*
+***********************************************************************************/
+function clientfiles_display($contents)
+{  
+    $tmp_content = $contents;
+
+    $location = stripos($tmp_content,"(% clientfiles %)");
+    
+    if ($location !== FALSE)
+    { 
+      $tmp_content = str_replace("(% clientfiles %)","",$tmp_content);
+    
+      $start_content = substr($tmp_content, 0 ,$location);
+      $end_content = substr($tmp_content, $location, strlen($tmp_content)-$location );
+    
+      $clientfiles_content = "booger!";
+    
+      $tmp_content = $start_content . $clientfiles_content . $end_content;
+    }
+    
+    return $tmp_content;
 }
 ?>

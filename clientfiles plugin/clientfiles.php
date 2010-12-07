@@ -24,7 +24,10 @@ register_plugin(
 
 // activate filter
 add_action('files-sidebar','createSideMenu',array($clientfiles_thisfile,'Client Files'));
+add_action('index-pretemplate','clientfiles_pagestart');
+
 add_filter('content','clientfiles_display');
+
 
 /***********************************************************************************
 *
@@ -63,7 +66,7 @@ function clientfiles_erasedir($client=NULL)
   }
 }
 
-function clientfiles_newdir($client=NULL, $pass=NULL)
+function clientfiles_newdir($client="", $pass="")
 {
   $message = "";
   $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
@@ -81,8 +84,8 @@ function clientfiles_newdir($client=NULL, $pass=NULL)
         exit('Failed to create client folder...');
       }        
     }
-    $pass = sha1($_POST["pass"])."\n";
-    $passfile = $clientfiles_dir . $_POST['client'] . '/' . ".cfpassword";
+    $pass = sha1($pass);
+    $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
     $fh = fopen($passfile, 'w') or die("can't create password file");
     fwrite($fh, $pass);
     fclose($fh);
@@ -90,6 +93,56 @@ function clientfiles_newdir($client=NULL, $pass=NULL)
   return $message;
 }
 
+function clientfiles_checkpass($client="", $hashpass="")
+{
+  // check for client folder
+  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+  if (($client != "") && (is_dir($clientfiles_dir . $client . '/')) && (is_file($clientfiles_dir . $client . '/.cfpassword')))
+  {
+    $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
+    $fh = fopen($passfile, 'r') or die("can't read password file");
+    $filepass= fread($fh, filesize($passfile));
+    fclose($fh);
+     
+    if ($hashpass == $filepass)
+    {
+     // set session variables
+     $_SESSION['cf_client'] = $client;
+     $_SESSION['cf_password'] = $hashpass;
+     return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+function clientfiles_checkloggedin()
+{
+  // check session variables
+  if (isset($_SESSION['cf_client']) && isset($_SESSION['cf_password']))
+  {
+  // valid session varaibles? 
+    if (clientfiles_checkpass($_SESSION['cf_client'], $_SESSION['cf_password']) === FALSE)
+    {
+      // Variables are incorrect, user not logged in */
+      unset($_SESSION['cf_client']);
+      unset($_SESSION['cf_password']);
+      return FALSE;
+    }
+    return TRUE;
+  }
+  /* User not logged in */
+  else
+  {
+    return FALSE;
+  }
+}
+
+/* start of page */
+function clientfiles_pagestart()
+{
+  //create session for clientpage login
+  session_start();
+}
 
 /***********************************************************************************
 *
@@ -153,10 +206,6 @@ function clientfiles_manage()
         } 
       }       
       
-      //
-      // display list of client files
-      //      
-
       //delete a file
       if (isset($_GET['delfile']))
       {
@@ -167,6 +216,9 @@ function clientfiles_manage()
         } 
       }
 
+      //
+      // display list of client files
+      //   
       $dir_handle = @opendir($client_dir) or exit('Unable to open the folder ' . $client_dir . ', check the folder privileges.');
       $filearray = array();
 
@@ -177,7 +229,7 @@ function clientfiles_manage()
           $filearray [] = $filename;
         }
       }
-      echo $client . ' Area Files:<br><br>';
+      echo 'Client: ' . $client . '<br>Files:<br><br>';
       
       // generate client area list:
       if (count($filearray) == 0)
@@ -262,22 +314,105 @@ function clientfiles_manage()
 ***********************************************************************************/
 function clientfiles_display($contents)
 {  
-    $tmp_content = $contents;
+  $tmp_content = $contents;
 
-    $location = stripos($tmp_content,"(% clientfiles %)");
+  $location = stripos($tmp_content,"(% clientfiles %)");
     
-    if ($location !== FALSE)
-    { 
-      $tmp_content = str_replace("(% clientfiles %)","",$tmp_content);
+  if ($location !== FALSE)
+  { 
+    $tmp_content = str_replace("(% clientfiles %)","",$tmp_content);
+   
+    $start_content = substr($tmp_content, 0 ,$location);
+    $end_content = substr($tmp_content, $location, strlen($tmp_content)-$location );
+
+    $goodlogin = FALSE;
     
-      $start_content = substr($tmp_content, 0 ,$location);
-      $end_content = substr($tmp_content, $location, strlen($tmp_content)-$location );
-    
-      $clientfiles_content = "booger!";
-    
-      $tmp_content = $start_content . $clientfiles_content . $end_content;
+    $clientfiles_content = '';
+      
+    if (isset($_POST['submitlogout']))
+    {
+      if (isset($_SESSION['cf_client'])) unset($_SESSION['cf_client']);
+      if (isset($_SESSION['cf_password'])) unset($_SESSION['cf_password']);
+    } 
+   
+    if (clientfiles_checkloggedin() === TRUE)
+    {
+      $goodlogin = TRUE;
     }
     
-    return $tmp_content;
+    if (isset($_POST['submitlogin']))
+    {
+      $goodlogin = clientfiles_checkpass($_POST['client'],sha1($_POST['pass']));  
+      if ($goodlogin === FALSE)
+      {
+        $clientfiles_content .= 'Bad Login!<br>';  // message
+      } 
+    } 
+      
+    if ($goodlogin === FALSE)
+    {
+      $clientfiles_content .= 'Please log is to view client files.<br>';
+      
+      // login form
+      $clientfiles_content .= '<form name="login" action="#clientlogin" method="post">';
+      $clientfiles_content .= 'Name: <input type="text" size="20" name="client" value="">';
+      $clientfiles_content .= '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
+      $clientfiles_content .= '&nbsp;&nbsp;<input type="submit" name="submitlogin" value="Client Log In" />';
+      $clientfiles_content .= '</form></br>';
+    }
+    else // logged in display stuff
+    {
+      $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+      $client = $_SESSION['cf_client'];
+      $client_dir = $clientfiles_dir . $client  . '/';
+            
+  
+      //
+      // display list of client files
+      //   
+      $dir_handle = @opendir($client_dir) or exit('Unable to open the folder ' . $client_dir . ', check the folder privileges.');
+      $filearray = array();
+
+      while ($filename = readdir($dir_handle))
+      {
+        if ((!is_dir($client_dir.$filename)) && (substr($filename,0,1) <> '.')) //ignore directories and dot files.
+        {
+          $filearray [] = $filename;
+        }
+      }
+      $clientfiles_content .= 'Client: ' . $client . '<br>';
+      
+      // generate client area list:
+      $filecount = count($filearray);
+      if ($filecount > 0)
+      {
+        sort($filearray);
+        foreach ($filearray as $clientfile)
+        {
+          $clientfiles_content .= '<a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile) . '" title="Download File">' . $clientfile . '</a><br>';
+        }
+      }      
+      
+      if ($filecount==1)
+      {
+        $clientfiles_content .= "$filecount file.<br>";
+      }
+      else
+      {
+        $clientfiles_content .= "$filecount files.<br>";
+      }
+      
+       
+      // logout form
+      $clientfiles_content .= '<form name="logout" action="#clientlogout" method="post">';
+      $clientfiles_content .= '<input type="submit" name="submitlogout" value="Client Log Out" />';
+      $clientfiles_content .= '</form></br>';        
+    }
+    
+    // build page
+    $tmp_content = $start_content . $clientfiles_content . $end_content;
+  }
+    
+  return $tmp_content;
 }
 ?>

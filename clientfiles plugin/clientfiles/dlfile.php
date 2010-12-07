@@ -1,8 +1,33 @@
 <?php
+session_start();
+
 # Include common.php
 include('../../admin/inc/common.php');
 
-if (cookie_check()) // Admin is logged in
+$loggedin = cookie_check(); //check admin login
+
+if (!$loggedin && isset($_SESSION['cf_client']) && isset($_SESSION['cf_password'])) //check for good password
+{
+  if (isset($_GET['client']) && (urldecode($_GET['client']) == $_SESSION['cf_client'])) // requested client matches session
+  {
+    $client = urldecode($_GET['client']);
+    $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+    if (($client != "") && (is_dir($clientfiles_dir . $client . '/')) && (is_file($clientfiles_dir . $client . '/.cfpassword')))
+    {
+      $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
+      $fh = fopen($passfile, 'r') or die("can't read password file");
+      $filepass= fread($fh, filesize($passfile));
+      fclose($fh);
+     
+      if ($_SESSION['cf_password'] == $filepass)
+      {
+        $loggedin = TRUE;
+      }
+    }
+  }
+}
+
+if ($loggedin===TRUE) // logged in
 {
  // serve file contents
  if (isset($_GET['client']) && isset($_GET['getfile']))
@@ -34,7 +59,7 @@ if (cookie_check()) // Admin is logged in
    $client = urldecode($_GET['client']);
    $getfile = (urldecode($_GET['getfile'])); 
    $fileparts = explode(".", $getfile);
-   $ext= $fileparts[(count($fileparts) - 1)];
+   $ext= strtolower($fileparts[(count($fileparts) - 1)]);
    $client_dir = $clientfiles_dir . $client  . '/';
    
    if ((substr($getfile,0,1) <> '.' ) && is_file($client_dir . '/' . $getfile))

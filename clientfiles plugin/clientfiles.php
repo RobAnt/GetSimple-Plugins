@@ -121,51 +121,106 @@ function clientfiles_manage()
     //delete a client
     if (isset($_GET['delclient']))
     {
-      clientfiles_erasedir($_GET['delclient']);          
-    }
+      clientfiles_erasedir(urldecode($_GET['delclient']));          
+    }    
     
-    
-     
-    
-    //display backend
-    $dir_handle = @opendir($clientfiles_dir) or exit('Unable to open the folder ' . $clientfiles_dir . ', check the folder privileges.');
-    $dirarray = array();
-
-
-    while ($filename = readdir($dir_handle))
+    //handle client page data
+    if (isset($_GET['manageclient']))
     {
-      if ((is_dir($clientfiles_dir.$filename)) && ($filename <> '.') && ($filename <> '..'))
+      //
+      // display list of client files
+      //
+      $client = urldecode($_GET['manageclient']);
+      $client_dir = $clientfiles_dir . $client  . '/';
+
+      //delete a file
+      if (isset($_GET['delfile']))
       {
-        $dirarray[] = $filename;
+        $delfile = (urldecode($_GET['delfile'])); 
+        if (substr($delfile,0,1) <> '.')
+        {
+          unlink($client_dir . '/' . $delfile ) or exit('Unable to delete ' . $delfile  .  ', check folder content privileges.');
+        } 
       }
-    }
 
-    
-    // generate client area list:
-    if (count($dirarray) == 0)
-    {
-      echo 'No client areas set up.<br>';
-    }
+      $dir_handle = @opendir($client_dir) or exit('Unable to open the folder ' . $client_dir . ', check the folder privileges.');
+      $filearray = array();
+
+      while ($filename = readdir($dir_handle))
+      {
+        if ((!is_dir($client_dir.$filename)) && (substr($filename,0,1) <> '.')) //ignore directories and dot files.
+        {
+          $filearray [] = $filename;
+        }
+      }
+      echo $client . ' Area Files:<br><br>';
+      
+      // generate client area list:
+      if (count($filearray) == 0)
+      {
+        echo 'No client files.<br><br>';
+      }
+      else
+      {
+        sort($filearray);
+        foreach ($filearray as $clientfile)
+        {
+          echo '<a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile) . '" title="Download File">' . $clientfile . '</a>&nbsp;&nbsp;';
+          echo '<a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile) . '" title="Delete File">X</a><br>';
+        }
+      }
+      echo '<hr>';
+ 
+// upload file code to go here
+
+      echo '<hr>';     
+      echo '<a href="load.php?id=clientfiles">Back to Client File Areas</a>';
+
+    }    
     else
     {
-      echo 'Client Areas:<br>';
-      foreach ($dirarray as $clientdir)
+      //
+      //  display main client list of folders
+      //
+      $dir_handle = @opendir($clientfiles_dir) or exit('Unable to open the folder ' . $clientfiles_dir . ', check the folder privileges.');
+      $dirarray = array();
+
+      while ($filename = readdir($dir_handle))
       {
-        echo '<a href="load.php?id=clientfiles' . '&manageclient=' . $clientdir . '" title="Manage Client Files">' . $clientdir . '</a>&nbsp;&nbsp;';
-        echo '<a href="load.php?id=clientfiles' . '&delclient=' . $clientdir . '" title="Delete Client Files">X</a><br>';
+        if ((is_dir($clientfiles_dir.$filename)) && ($filename <> '.') && ($filename <> '..'))
+        {
+          $dirarray[] = $filename;
+        }
       }
-    }
-    echo '<hr>';
+  
+      // generate client area list:
+      if (count($dirarray) == 0)
+      {
+        echo 'No client file areas set up.<br>';
+      }
+      else
+      {
+        sort($dirarray);
+        echo 'Client File Areas:<br><br>';
+        foreach ($dirarray as $clientdir)
+        {
+          echo '<a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a>&nbsp;&nbsp;';
+          echo '<a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a><br>';
+        }
+      }
+      echo '<hr>';
     
-    // New Client Area form
-    echo '<form name="clientnew" action="load.php?id=clientfiles" method="post">';
-    echo 'Name: <input type="text" size="20" name="client" value="">';
-    echo '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
-    echo '&nbsp;&nbsp;<input type="submit" name="submitclientnew" value="Create Area" />';
-    echo '</form>';
+      // New Client Area form
+      echo '<form name="clientnew" action="load.php?id=clientfiles" method="post">';
+      echo 'Name: <input type="text" size="20" name="client" value="">';
+      echo '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
+      echo '&nbsp;&nbsp;<input type="submit" name="submitclientnew" value="Create Area" />';
+      echo '</form>';
+    }
   }
   else
   {
+    // error message - no client file page created.
     echo "Folder .../data/other/clientfiles_cache doesn't exist!";
   }
 }

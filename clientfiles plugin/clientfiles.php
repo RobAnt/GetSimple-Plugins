@@ -2,7 +2,7 @@
 /*
 Plugin Name: Client Files
 Description: a GetSimple CMS plugin or provide password protected client file pages and a back-end to manage them
-Version: 0.1
+Version: 0.2
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $clientfiles_thisfile=basename(__FILE__, ".php");
 register_plugin(
   $clientfiles_thisfile,
   'Client Files',
-  '0.1',
+  '0.2',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'Provides a simple file manager with password protected access areas for Get Simple',
@@ -137,12 +137,23 @@ function clientfiles_checkloggedin()
   }
 }
 
-/* start of page */
+function clientfiles_format_bytes($size) {
+    $units = array('B', 'KB', 'MB', 'GB', 'TB');
+    for ($i = 0; $size >= 1024 && $i < 4; $i++) $size /= 1024;
+    return round($size, 2).$units[$i];
+}
+
+/***********************************************************************************
+*
+* start of front end page
+*
+***********************************************************************************/
 function clientfiles_pagestart()
 {
   //create session for clientpage login
   session_start();
 }
+
 
 /***********************************************************************************
 *
@@ -377,32 +388,40 @@ function clientfiles_display($contents)
       {
         if ((!is_dir($client_dir.$filename)) && (substr($filename,0,1) <> '.')) //ignore directories and dot files.
         {
-          $filearray [] = $filename;
+          $filearray [] = array($filename, date("Y/m/d H:i:s", filemtime($client_dir.$filename)), '('.clientfiles_format_bytes(filesize($client_dir.$filename)).')');
         }
       }
-      $clientfiles_content .= 'Client: ' . $client . '<br>';
+      
+      $clientfiles_content .= '<table width="100%" align="center" cellpadding="3px" style="border: 1px solid #000000 border-spacing: 0px; border-collapse: collapse;">';
+      $clientfiles_content .= '<caption><strong>Client: ' . $client . '</strong></caption>';
+      $clientfiles_content .= '<thead><tr><th style="border: 1px solid #000000">File</th><th style="border: 1px solid #000000">Date</th></tr></head>';
       
       // generate client area list:
+      $clientfiles_content .= '<tbody>';
       $filecount = count($filearray);
       if ($filecount > 0)
       {
         sort($filearray);
         foreach ($filearray as $clientfile)
         {
-          $clientfiles_content .= '<a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile) . '" title="Download File">' . $clientfile . '</a><br>';
+          $clientfiles_content .= '<tr><td style="border: 1px solid #000000"><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
+                                  . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] 
+                                  . '</a>&nbsp;' . $clientfile[2] . '</td><td style="border: 1px solid #000000">' . $clientfile[1] . '</td></tr>';
         }
       }      
-      
+
+      $clientfiles_content .= '<tr><td colspan="2" style="border: 1px solid #000000">';
       if ($filecount==1)
       {
-        $clientfiles_content .= "$filecount file.<br>";
+        $clientfiles_content .= "$filecount file";
       }
       else
       {
-        $clientfiles_content .= "$filecount files.<br>";
+        $clientfiles_content .= "$filecount files";
       }
-      
-       
+      $clientfiles_content .= '</td></tr>';
+      $clientfiles_content .= '</tbody></table><br>';  
+             
       // logout form
       $clientfiles_content .= '<form name="logout" action="#clientlogout" method="post">';
       $clientfiles_content .= '<input type="submit" name="submitlogout" value="Client Log Out" />';

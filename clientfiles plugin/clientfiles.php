@@ -63,6 +63,10 @@ function clientfiles_erasedir($client=NULL)
     {
       exit('Unable to erase the folder ' . $clientfiles_dir .  ', check folder privileges.');
     }
+    else
+    {
+      echo '<div style="display: block;" class="updated">Erased Client ' . $client. '.</div>';
+    }
   }
 }
 
@@ -79,18 +83,25 @@ function clientfiles_newdir($client="", $pass="")
   {
     if (!is_dir($clientfiles_dir . $client . '/'))  // new dir - create it
     {
+      $message = "Created client " . $client;
       if (!mkdir($clientfiles_dir . $client . '/'))
       {
         exit('Failed to create client folder...');
       }        
+    }
+    else
+    {
+      $message = "Updated client " . $client . " password.";
     }
     $pass = sha1($pass);
     $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
     $fh = fopen($passfile, 'w') or die("can't create password file");
     fwrite($fh, $pass);
     fclose($fh);
+    
   }
-  return $message;
+  if ($message!="") echo '<div style="display: block;" class="updated">' . $message . '</div>';
+  return;
 }
 
 function clientfiles_checkpass($client="", $hashpass="")
@@ -137,10 +148,132 @@ function clientfiles_checkloggedin()
   }
 }
 
-function clientfiles_format_bytes($size) {
+function clientfiles_format_bytes($size) 
+{
     $units = array('B', 'KB', 'MB', 'GB', 'TB');
     for ($i = 0; $size >= 1024 && $i < 4; $i++) $size /= 1024;
     return round($size, 2).$units[$i];
+}
+
+function clientfiles_clientlist() 
+{
+  //
+  //  echos main client list of folders and new client form fields
+  //
+  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+  $dir_handle = @opendir($clientfiles_dir) or exit('Unable to open the folder ' . $clientfiles_dir . ', check the folder privileges.');
+  $dirarray = array();
+
+  while ($filename = readdir($dir_handle))
+  {
+    if ((is_dir($clientfiles_dir.$filename)) && ($filename <> '.') && ($filename <> '..'))
+    {
+      $dirarray[] = $filename;
+    }
+  }
+  
+  // generate client area list:
+  if (count($dirarray) == 0)
+  {
+    echo 'No client file areas set up.<br>';
+  }
+  else
+  {
+    echo '<table class="highlight">';
+    sort($dirarray);
+    echo '<caption><strong>Client File Areas:</strong></caption>';
+    echo '<tbody>';
+    foreach ($dirarray as $clientdir)
+    { 
+      echo '<tr><td><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a></td>';
+      echo '<td><a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a></td></tr>';
+    }
+    echo '</tbody></table>';
+  }
+    
+  // New Client Area form
+  echo '<form name="clientnew" action="load.php?id=clientfiles" method="post">';
+  echo 'Name: <input type="text" size="20" name="client" value="">';
+  echo '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
+  echo '&nbsp;&nbsp;<input type="submit" name="submitclientnew" value="Create Area" />';
+  echo '</form>';
+}
+
+function clientfiles_filelist($client)
+{
+  //
+  // display list of client files
+  //
+  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+  $client_dir = $clientfiles_dir . $client  . '/';   
+  $dir_handle = @opendir($client_dir) or exit('Unable to open the folder ' . $client_dir . ', check the folder privileges.');
+  $filearray = array();
+
+  while ($filename = readdir($dir_handle))
+  {
+    if ((!is_dir($client_dir.$filename)) && (substr($filename,0,1) <> '.')) //ignore directories and dot files.
+    {
+      $filearray [] = array($filename, date("Y/m/d H:i:s", filemtime($client_dir.$filename)), '('.clientfiles_format_bytes(filesize($client_dir.$filename)).')');
+    }
+  }
+  
+  echo '<table class="highlight">';
+  echo '<caption><strong>Client ' . $client . ' files:</strong></caption>';
+  echo '<tbody>';  
+      
+  // generate client area list:
+  if (count($filearray) == 0)
+  {
+    echo '<tr><td>No client files.</td></tr>';
+  }
+  else
+  {
+    sort($filearray);
+    foreach ($filearray as $clientfile)
+    {
+      echo '<tr><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a>&nbsp;' . $clientfile[2] . '</td>';
+      echo '<td>' . $clientfile[1] . '</td>';
+      echo '<td><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile[0]) . '" title="Delete File">X</a></td></tr>';
+    }
+  }
+  echo '</tbody></table>';
+ 
+  // File Upload form
+  echo '<form name="clientfilenew" enctype="multipart/form-data" action="load.php?id=clientfiles" method="post">';
+  echo '<input type="hidden" name="MAX_FILE_SIZE" value="10000000" />';
+  echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
+  echo 'Upload File: <input type="file" name="uploadedfile">&nbsp;&nbsp;';
+  echo '<input type="submit" name="submitfilenew" value="Upload File" />';
+  echo '</form>';    
+        
+  echo '<hr>';     
+  echo '<a href="load.php?id=clientfiles">Back to Client File Areas</a>';
+}
+
+function clientfiles_uploadfile($client, $targetfile, $tempfile)
+{
+  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+  $client_dir = $clientfiles_dir . $client  . '/';   
+  $target_path = $client_dir . $targetfile; 
+  if(move_uploaded_file($tempfile, $target_path)) 
+  {
+    echo '<div style="display: block;" class="updated">The file ' . $targetfile. ' has been uploaded.</div>';
+  } 
+  else
+  {
+    echo '<div style="display: block;" class="error">Unable to upload ' . $targetfile. ' please try again.</div>';
+  } 
+}
+
+function clientfiles_delfile($client, $delfile)
+{
+  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+  $client_dir = $clientfiles_dir . $client  . '/';
+  if (substr($delfile,0,1) <> '.')
+  {
+    unlink($client_dir . '/' . $delfile ) or exit('Unable to delete ' . $delfile  .  ', check folder content privileges.');
+  }
+  echo '<div style="display: block;" class="updated">' . $delfile. ' deleted.</div>';
 }
 
 /***********************************************************************************
@@ -179,136 +312,36 @@ function clientfiles_manage()
     //create new client
     if (isset($_POST['submitclientnew']))
     {
-      echo clientfiles_newdir($_POST['client'],$_POST['pass']);          
+      clientfiles_newdir($_POST['client'],$_POST['pass']);
+      clientfiles_clientlist();          
     } 
-
     //delete a client
-    if (isset($_GET['delclient']))
+    elseif (isset($_GET['delclient']))
     {
-      clientfiles_erasedir(urldecode($_GET['delclient']));          
+      clientfiles_erasedir(urldecode($_GET['delclient']));
+      clientfiles_clientlist();          
     }    
-    
-    //handle client page data
-    if ((isset($_GET['manageclient'])) || (isset($_POST['submitfilenew'])))
+    //process file upload
+    elseif (isset($_POST['submitfilenew']) && (isset($_POST['client'])))
     {
-
-      if (isset($_GET['manageclient']))
-      {
-        $client = urldecode($_GET['manageclient']);
-      }
-      elseif (isset($_POST['submitfilenew']))
-      {
-        $client = urldecode($_POST['client']);      
-      } 
-      
-      $client_dir = $clientfiles_dir . $client  . '/';
-      
-      //process file upload
-      if (isset($_POST['submitfilenew']))
-      {
-        $target_path = $client_dir . basename( $_FILES['uploadedfile']['name']); 
-        if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) 
-        {
-          echo "(The file ".  basename( $_FILES['uploadedfile']['name']). " has been uploaded.)<br>";
-        } 
-        else
-        {
-          echo "Error uploading the file, please try again!<br>";
-        } 
-      }       
-      
-      //delete a file
-      if (isset($_GET['delfile']))
-      {
-        $delfile = (urldecode($_GET['delfile'])); 
-        if (substr($delfile,0,1) <> '.')
-        {
-          unlink($client_dir . '/' . $delfile ) or exit('Unable to delete ' . $delfile  .  ', check folder content privileges.');
-        } 
-      }
-
-      //
-      // display list of client files
-      //   
-      $dir_handle = @opendir($client_dir) or exit('Unable to open the folder ' . $client_dir . ', check the folder privileges.');
-      $filearray = array();
-
-      while ($filename = readdir($dir_handle))
-      {
-        if ((!is_dir($client_dir.$filename)) && (substr($filename,0,1) <> '.')) //ignore directories and dot files.
-        {
-          $filearray [] = $filename;
-        }
-      }
-      echo 'Client: ' . $client . '<br>Files:<br><br>';
-      
-      // generate client area list:
-      if (count($filearray) == 0)
-      {
-        echo 'No client files.<br><br>';
-      }
-      else
-      {
-        sort($filearray);
-        foreach ($filearray as $clientfile)
-        {
-          echo '<a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile) . '" title="Download File">' . $clientfile . '</a>&nbsp;&nbsp;';
-          echo '<a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile) . '" title="Delete File">X</a><br>';
-        }
-      }
-      echo '<hr>';
- 
-      // File Upload form
-      echo '<form name="clientfilenew" enctype="multipart/form-data" action="load.php?id=clientfiles" method="post">';
-      echo '<input type="hidden" name="MAX_FILE_SIZE" value="10000000" />';
-      echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
-      echo 'Upload File: <input type="file" name="uploadedfile">&nbsp;&nbsp;';
-      echo '<input type="submit" name="submitfilenew" value="Upload File" />';
-      echo '</form>';    
-        
-      echo '<hr>';     
-      echo '<a href="load.php?id=clientfiles">Back to Client File Areas</a>';
-
-    }    
+      clientfiles_uploadfile(urldecode($_POST['client']), basename( $_FILES['uploadedfile']['name']), $_FILES['uploadedfile']['tmp_name']);
+      clientfiles_filelist(urldecode($_POST['client']));
+    }   
+    //delete a file
+    elseif ((isset($_GET['manageclient'])) && (isset($_GET['delfile'])))
+    {  
+      clientfiles_delfile(urldecode($_GET['manageclient']), urldecode($_GET['delfile']));
+      clientfiles_filelist(urldecode($_GET['manageclient'])); 
+    }
+    //manage client file list    
+    elseif (isset($_GET['manageclient']))
+    {
+      clientfiles_filelist(urldecode($_GET['manageclient']));
+    } 
+    // display list of clients
     else
     {
-      //
-      //  display main client list of folders
-      //
-      $dir_handle = @opendir($clientfiles_dir) or exit('Unable to open the folder ' . $clientfiles_dir . ', check the folder privileges.');
-      $dirarray = array();
-
-      while ($filename = readdir($dir_handle))
-      {
-        if ((is_dir($clientfiles_dir.$filename)) && ($filename <> '.') && ($filename <> '..'))
-        {
-          $dirarray[] = $filename;
-        }
-      }
-  
-      // generate client area list:
-      if (count($dirarray) == 0)
-      {
-        echo 'No client file areas set up.<br>';
-      }
-      else
-      {
-        sort($dirarray);
-        echo 'Client File Areas:<br><br>';
-        foreach ($dirarray as $clientdir)
-        {
-          echo '<a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a>&nbsp;&nbsp;';
-          echo '<a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a><br>';
-        }
-      }
-      echo '<hr>';
-    
-      // New Client Area form
-      echo '<form name="clientnew" action="load.php?id=clientfiles" method="post">';
-      echo 'Name: <input type="text" size="20" name="client" value="">';
-      echo '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
-      echo '&nbsp;&nbsp;<input type="submit" name="submitclientnew" value="Create Area" />';
-      echo '</form>';
+      clientfiles_clientlist(); 
     }
   }
   else

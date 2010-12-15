@@ -35,6 +35,20 @@ add_filter('content','clientfiles_display');
 *
 ***********************************************************************************/
 
+function clientfiles_erasedirconf($client=NULL)
+{
+  echo '<div style="display: block; text-align: center" class="error">';
+  echo 'Are you sure you want to delete client area <strong>' . $client. '</strong> and all files uploaded for that client?<br>';
+  echo '(This can NOT be undone)<br>';
+  // Delete file form
+  echo '<form name="clientdel" action="load.php?id=clientfiles" method="post">';
+  echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
+  echo '<input type="submit" name="delclientconf" value="Delete" />';
+  echo '&nbsp;&nbsp;<input type="submit" name="delclientcancel" value="Cancel" />';
+  echo '</form>';
+  echo '</div>';
+}
+
 /* clear the clientfiles directory */
 function clientfiles_erasedir($client=NULL)
 {
@@ -265,6 +279,21 @@ function clientfiles_uploadfile($client, $targetfile, $tempfile)
   } 
 }
 
+function clientfiles_delfileconf($client, $delfile)
+{
+  echo '<div style="display: block; text-align: center" class="error">';
+  echo 'Are you sure you want to delete file <strong>' . $delfile . '</strong> from <strong>' . $client. '</strong> area?<br>';
+  echo '(This can NOT be undone)<br>';
+  // Delete file form
+  echo '<form name="clientdelfile" action="load.php?id=clientfiles" method="post">';
+  echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
+  echo '<input type="hidden" name="delfile" value="' . urlencode($delfile) . '" />';
+  echo '<input type="submit" name="delfileconf" value="Delete" />';
+  echo '&nbsp;&nbsp;<input type="submit" name="delfilecancel" value="Cancel" />';
+  echo '</form>';
+  echo '</div>';
+}
+
 function clientfiles_delfile($client, $delfile)
 {
   $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
@@ -295,7 +324,6 @@ function clientfiles_pagestart()
 ***********************************************************************************/
 function clientfiles_manage()
 {
-
   $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
 
   // create the directory if it doesn't exist. 
@@ -315,25 +343,44 @@ function clientfiles_manage()
       clientfiles_newdir($_POST['client'],$_POST['pass']);
       clientfiles_clientlist();          
     } 
-    //delete a client
+    //delete a client confirmation
     elseif (isset($_GET['delclient']))
     {
-      clientfiles_erasedir(urldecode($_GET['delclient']));
-      clientfiles_clientlist();          
+      clientfiles_erasedirconf(urldecode($_GET['delclient']));         
+    } 
+    //del a client 
+    elseif ((isset($_POST['delclientconf'])) && ($_POST['delclientconf']=="Delete"))
+    {
+      clientfiles_erasedir(urldecode($_POST['client']));
+      clientfiles_clientlist();   
     }    
+    //del client cancel
+    elseif ((isset($_POST['delclientcancel'])) && ($_POST['delclientcancel']=="Cancel"))
+    {
+      clientfiles_clientlist();   
+    }
     //process file upload
     elseif (isset($_POST['submitfilenew']) && (isset($_POST['client'])))
     {
       clientfiles_uploadfile(urldecode($_POST['client']), basename( $_FILES['uploadedfile']['name']), $_FILES['uploadedfile']['tmp_name']);
       clientfiles_filelist(urldecode($_POST['client']));
     }   
-    //delete a file
+    //delete a file confirmation
     elseif ((isset($_GET['manageclient'])) && (isset($_GET['delfile'])))
     {  
-      clientfiles_delfile(urldecode($_GET['manageclient']), urldecode($_GET['delfile']));
-      clientfiles_filelist(urldecode($_GET['manageclient'])); 
+      clientfiles_delfileconf(urldecode($_GET['manageclient']), urldecode($_GET['delfile']));
     }
-    //manage client file list    
+    //del file
+    elseif ((isset($_POST['delfileconf'])) && ($_POST['delfileconf']=="Delete"))
+    {
+      clientfiles_delfile(urldecode($_POST['client']), urldecode($_POST['delfile']));
+      clientfiles_filelist(urldecode($_POST['client']));   
+    } 
+    //del file cancel
+    elseif ((isset($_POST['delfilecancel'])) && ($_POST['delfilecancel']=="Cancel"))
+    {
+      clientfiles_filelist(urldecode($_POST['client']));   
+    }     //manage client file list    
     elseif (isset($_GET['manageclient']))
     {
       clientfiles_filelist(urldecode($_GET['manageclient']));
@@ -347,7 +394,7 @@ function clientfiles_manage()
   else
   {
     // error message - no client file page created.
-    echo "Folder .../data/other/clientfiles_cache doesn't exist!";
+    echo "Folder .../data/other/clientfiles doesn't exist!";
   }
 }
 

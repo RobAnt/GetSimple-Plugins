@@ -2,19 +2,19 @@
 /*
 Plugin Name: Client Files
 Description: a GetSimple CMS plugin or provide password protected client file pages and a back-end to manage them
-Version: 0.2
+Version: 0.3
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
 
 // get correct id for plugin
-$clientfiles_thisfile=basename(__FILE__, ".php");
+$thisfile=basename(__FILE__, ".php");
 
 // register plugin
 register_plugin(
-  $clientfiles_thisfile,
+  $thisfile,
   'Client Files',
-  '0.2',
+  '0.3',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'Provides a simple file manager with password protected access areas for Get Simple',
@@ -23,7 +23,7 @@ register_plugin(
 );
 
 // activate filter
-add_action('files-sidebar','createSideMenu',array($clientfiles_thisfile,'Client Files'));
+add_action('files-sidebar','createSideMenu',array($thisfile,'Client Files'));
 add_action('index-pretemplate','clientfiles_pagestart');
 
 add_filter('content','clientfiles_display');
@@ -43,8 +43,8 @@ function clientfiles_erasedirconf($client=NULL)
   // Delete file form
   echo '<form name="clientdel" action="load.php?id=clientfiles" method="post">';
   echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
-  echo '<input type="submit" name="delclientconf" value="Delete" />';
-  echo '&nbsp;&nbsp;<input type="submit" name="delclientcancel" value="Cancel" />';
+  echo '<input type="submit" class="submit" name="delclientconf" value="Delete" />';
+  echo '&nbsp;&nbsp;<input type="submit" class="submit" name="delclientcancel" value="Cancel" />';
   echo '</form>';
   echo '</div>';
 }
@@ -193,24 +193,38 @@ function clientfiles_clientlist()
   }
   else
   {
-    echo '<table class="highlight">';
+    echo '<table class="highlight" width="100%">';
     sort($dirarray);
     echo '<caption><strong>Client File Areas:</strong></caption>';
     echo '<tbody>';
     foreach ($dirarray as $clientdir)
     { 
-      echo '<tr><td><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a></td>';
-      echo '<td><a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a></td></tr>';
+      echo '<tr><td width="80%"><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a></td>';
+      echo '<td width="5%"><a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a></td>';
+      echo '<td width="15%"><a href="load.php?id=clientfiles' . '&changepass=' . urlencode($clientdir) . '" title="Change Client Password">Password</a></td></tr>';
     }
     echo '</tbody></table>';
   }
     
   // New Client Area form
   echo '<form name="clientnew" action="load.php?id=clientfiles" method="post">';
-  echo 'Name: <input type="text" size="20" name="client" value="">';
-  echo '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
-  echo '&nbsp;&nbsp;<input type="submit" name="submitclientnew" value="Create Area" />';
+  echo 'Name: <input type="text" class="short text" style="width: 150px" name="client" value="">';
+  echo '&nbsp;&nbsp;Password: <input type="password" class="short text" style="width: 150px" name="pass" value="">';
+  echo '&nbsp;&nbsp;<input type="submit" class="submit" name="submitclientnew" value="New Client Area" />';
   echo '</form>';
+}
+
+function clientfiles_changepass($client)
+{
+  echo 'Set new password for Client <strong>' . $client. '</strong><br>.';
+  // password form
+  echo '<form name="changepass" action="load.php?id=clientfiles" method="post">';
+  echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
+  echo '<input type="password" class="short text" style="width: 150px" name="pass" value="">';
+  echo '&nbsp;&nbsp;<input type="submit" class="submit" name="changepassconf" value="Change Password" />';
+  echo '&nbsp;&nbsp;<input type="submit" class="submit" name="changepasscancel" value="Cancel" />';
+  echo '</form>';
+  echo '</div>';
 }
 
 function clientfiles_filelist($client)
@@ -231,7 +245,7 @@ function clientfiles_filelist($client)
     }
   }
   
-  echo '<table class="highlight">';
+  echo '<table class="highlight" width="100%">';
   echo '<caption><strong>Client ' . $client . ' files:</strong></caption>';
   echo '<tbody>';  
       
@@ -288,8 +302,8 @@ function clientfiles_delfileconf($client, $delfile)
   echo '<form name="clientdelfile" action="load.php?id=clientfiles" method="post">';
   echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
   echo '<input type="hidden" name="delfile" value="' . urlencode($delfile) . '" />';
-  echo '<input type="submit" name="delfileconf" value="Delete" />';
-  echo '&nbsp;&nbsp;<input type="submit" name="delfilecancel" value="Cancel" />';
+  echo '<input type="submit" class="submit" name="delfileconf" value="Delete" />';
+  echo '&nbsp;&nbsp;<input type="submit" class="submit" name="delfilecancel" value="Cancel" />';
   echo '</form>';
   echo '</div>';
 }
@@ -337,12 +351,17 @@ function clientfiles_manage()
   
   if (is_dir($clientfiles_dir))
   {    
-    //create new client
-    if (isset($_POST['submitclientnew']))
+    //create new client or change an existing ones password
+    if ((isset($_POST['submitclientnew'])) || (isset($_POST['changepassconf'])))
     {
       clientfiles_newdir($_POST['client'],$_POST['pass']);
       clientfiles_clientlist();          
     } 
+    // display change client password form
+    elseif (isset($_GET['changepass']))
+    {
+      clientfiles_changepass(urldecode($_GET['changepass']));
+    }
     //delete a client confirmation
     elseif (isset($_GET['delclient']))
     {
@@ -380,7 +399,8 @@ function clientfiles_manage()
     elseif ((isset($_POST['delfilecancel'])) && ($_POST['delfilecancel']=="Cancel"))
     {
       clientfiles_filelist(urldecode($_POST['client']));   
-    }     //manage client file list    
+    }     
+    //manage client file list    
     elseif (isset($_GET['manageclient']))
     {
       clientfiles_filelist(urldecode($_GET['manageclient']));
@@ -446,8 +466,8 @@ function clientfiles_display($contents)
       
       // login form
       $clientfiles_content .= '<form name="login" action="#clientlogin" method="post">';
-      $clientfiles_content .= 'Name: <input type="text" size="20" name="client" value="">';
-      $clientfiles_content .= '&nbsp;&nbsp;Password: <input type="password" size="20" name="pass" value="">';
+      $clientfiles_content .= 'Name: <input type="text" style="width: 150px" name="client" value="">';
+      $clientfiles_content .= '&nbsp;&nbsp;Password: <input type="password" style="width: 150px" name="pass" value="">';
       $clientfiles_content .= '&nbsp;&nbsp;<input type="submit" name="submitlogin" value="Client Log In" />';
       $clientfiles_content .= '</form></br>';
     }

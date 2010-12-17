@@ -199,9 +199,27 @@ function clientfiles_clientlist()
     echo '<tbody>';
     foreach ($dirarray as $clientdir)
     { 
-      echo '<tr><td width="80%"><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir . '</a></td>';
-      echo '<td width="5%"><a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a></td>';
-      echo '<td width="15%"><a href="load.php?id=clientfiles' . '&changepass=' . urlencode($clientdir) . '" title="Change Client Password">Password</a></td></tr>';
+      // count client files and size
+      $clientinfo = "<span> (";
+      $dir_handle = @opendir($clientfiles_dir.$clientdir);
+      $clientfilecount = 0;
+      $clientsize = 0;
+      while ($filename = readdir($dir_handle))
+      {
+        if (substr($filename,0,1)<>".")
+        {
+          $clientfilecount += 1;
+          $clientsize += filesize($clientfiles_dir.$clientdir."/".$filename);
+        }
+      }      
+      $clientinfo .= $clientfilecount . " file";
+      if ($clientfilecount <> 1) $clientinfo .= "s";
+      $clientinfo .= ", " . clientfiles_format_bytes($clientsize) . ") </span>";
+
+      echo '<tr><td ><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($clientdir) . '" title="Manage File Area">' . $clientdir. '</a></td>';
+      echo '<td><span>' . $clientinfo . '</span></td>';      
+      echo '<td width="15%"><a href="load.php?id=clientfiles' . '&changepass=' . urlencode($clientdir) . '" title="Change Client Password"><span>Password</span></a></td>';
+      echo '<td class="delete" width="10px"><a href="load.php?id=clientfiles' . '&delclient=' . urlencode($clientdir) . '" title="Delete Client File Area">X</a></td></tr>';
     }
     echo '</tbody></table>';
   }
@@ -259,9 +277,9 @@ function clientfiles_filelist($client)
     sort($filearray);
     foreach ($filearray as $clientfile)
     {
-      echo '<tr><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a>&nbsp;' . $clientfile[2] . '</td>';
-      echo '<td>' . $clientfile[1] . '</td>';
-      echo '<td><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile[0]) . '" title="Delete File">X</a></td></tr>';
+      echo '<tr><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a> <span>' . $clientfile[2] . '</span></td>';
+      echo '<td><span>' . $clientfile[1] . '</span></td>';
+      echo '<td class="delete" width="10px"><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile[0]) . '" title="Delete File">X</a></td></tr>';
     }
   }
   echo '</tbody></table>';

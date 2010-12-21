@@ -510,25 +510,33 @@ function clientfiles_display($contents)
         }
       }
       
-      $clientfiles_content .= '<table width="100%" align="center" cellpadding="3px" style="border: 1px solid #000000 border-spacing: 0px; border-collapse: collapse;">';
-      $clientfiles_content .= '<caption><strong>Client: ' . $client . '</strong></caption>';
-      $clientfiles_content .= '<thead><tr><th style="border: 1px solid #000000">File</th><th style="border: 1px solid #000000">Date</th></tr></head>';
+      $clientfiles_content .= '<table id="cf_table">';
+      $clientfiles_content .= '<caption>Client: ' . $client . '</caption>';
+      $clientfiles_content .= '<thead><tr><th>File</th><th>Date</th></tr></head>';
       
       // generate client area list:
       $clientfiles_content .= '<tbody>';
       $filecount = count($filearray);
       if ($filecount > 0)
+      $rowclass="";
       {
         sort($filearray);
         foreach ($filearray as $clientfile)
         {
-          $clientfiles_content .= '<tr><td style="border: 1px solid #000000"><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
+          $clientfiles_content .= '<tr' . $rowclass . '><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
                                   . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] 
-                                  . '</a>&nbsp;' . $clientfile[2] . '</td><td style="border: 1px solid #000000">' . $clientfile[1] . '</td></tr>';
+                                  . '</a>&nbsp;' . $clientfile[2] . '</td><td>' . $clientfile[1] . '</td></tr>';
+          if ($rowclass=="") {
+            $rowclass=' class="alt"';
+          }
+          else
+          {
+            $rowclass="";
+          }
         }
       }      
 
-      $clientfiles_content .= '<tr><td colspan="2" style="border: 1px solid #000000">';
+      $clientfiles_content .= '<tr' . $rowclass . '><td colspan="2">';
       if ($filecount==1)
       {
         $clientfiles_content .= "$filecount file";

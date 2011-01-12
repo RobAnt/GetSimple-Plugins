@@ -51,7 +51,7 @@ function get_external_comments() {
   echo return_external_comments();
 }
 
-/* returns the disqus page code */
+/* returns the appropriate page code */
 function return_external_comments() {
   global $external_comments_conf;
     

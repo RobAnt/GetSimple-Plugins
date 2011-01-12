@@ -2,7 +2,7 @@
 /*
 Plugin Name: Disqus
 Description: Provides Discus comments support on pages
-Version: 0.1
+Version: 0.2
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
     $thisfile, 
     'Disqus Comments',     
-    '0.1',         
+    '0.2',         
     'Rob Antonishen',
     'http://ffaat.poweredbyclear.com', 
     'Provides Disqus Commenting',
@@ -36,10 +36,24 @@ function disqus_display($contents) {
       
   if ($location !== FALSE)
   {
-    global $disqus_conf;
     $tmp_content = str_replace("(% disqus %)","",$tmp_content);
     $start_content = substr($tmp_content, 0 ,$location);
     $end_content = substr($tmp_content, $location, strlen($tmp_content)-$location );
+    
+    $tmp_content = $start_content . return_disqus() . $end_content;
+  }
+  // build page
+  return $tmp_content;
+}
+
+/* echo the disqus page code for use in templates */
+function get_disqus() {
+  echo return_disqus();
+}
+
+/* returns the disqus page code */
+function return_disqus() {
+    global $disqus_conf;
     
     $new_content = '<div id="disqus_thread"></div>';
     $new_content .= '<script type="text/javascript">';
@@ -59,13 +73,10 @@ $new_content .= <<<INLINECODE
 <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 <a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
 INLINECODE;
-
-    // build page
-    $tmp_content = $start_content . $new_content . $end_content;
-  }
-  
-  return $tmp_content;
+    return $new_content;
 }
+
+
 
 /* backend management page */
 function disqus_config() {
@@ -99,7 +110,8 @@ function disqus_config() {
   echo '>&nbsp; Developer Mode: testing the system on an inaccessible website, e.g. secured staging server or a local environment.<br /><br />';  
   echo "<input name='submit_settings' class='submit' type='submit' value='Save Settings'>\n";
   echo '</form>';
-  echo '<p /><p><i>Enable comments on a single page by adding the tag <b>&lt% disqus %&gt</b> in that page, or in the body of your page template to have comments on all pages.</i></p>';
+  echo '<p /><p><i>Enable comments on a single page by adding the tag <b>(% disqus %)</b> in that page.<br />';
+  echo 'Alternately insert <b>&lt?php get_disqus(); ?&gt</b> in your page template to have comments for all pages.</i></p>';
 }
 
 /* get config settings from file */

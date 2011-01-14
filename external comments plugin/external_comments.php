@@ -125,6 +125,7 @@ function external_comments_config() {
   echo '> Intense Debate<br /></p>';
   
   echo '<p>Your forum\'s ID - the unique identifier for your website from the comment provider:<br />';
+  echo '(For Disqus, this is referred to as your <i>Forum Shortname</i>, for IntenseDebate this is referred to as your <i>Site Account</i>.)';
   echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';
   
   if ($external_comments_conf['provider'] == "Disqus")

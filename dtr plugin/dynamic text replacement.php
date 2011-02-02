@@ -172,7 +172,7 @@ function dtr_config() {
   }
   natcasesort($fontlist);
   
-  echo "<label>Dynamic Text Replacemnt Defaults</label><br/><br/>";
+  echo "<label>Dynamic Text Replacement Defaults</label><br/><br/>";
   echo '<form name="dtr_settings" action="load.php?id=dynamic%20text%20replacement" method="post">';
   
   echo '<p>Default Font:&nbsp;';
@@ -221,7 +221,7 @@ function dtr_config() {
   echo "<input name='submit_settings' class='submit' type='submit' value='Save Settings'>\n";
 
 
-  echo "<br /><br /><label>Dynamic Text Replacemnt Status</label>";
+  echo "<br /><br /><label>Dynamic Text Replacement Status</label>";
   /* delete cache */
   $fileglob = GSPLUGINPATH . 'dtr/cache/'.'dtr_*.png';
   $cachecount = count(glob($fileglob));
@@ -235,6 +235,19 @@ function dtr_config() {
   echo 'onclick="window.location.href=' . "'" . $_SERVER["REQUEST_URI"] . "&cache_flush=Y'" . '">';
     
   echo '</form>';
+
+  ?>
+  <br /><br /><label>Dynamic Text Replacement Usage</label><br /><br />
+  <p>This plugin uses GD so the <a href="http://www.php.net/manual/en/ref.image.php"
+  title="More info on GD and PHP">GD library for PHP</a> must be
+  installed on the web server GetSimple runs on.</p>
+  <p>Just use the markup in your page content.  Basic usage is <b>[DTR]Text to Render[/DTR]</b><br>
+  Full syntax is [DTR font=xxx; color=rrggbb; aa=on|off; 
+  bgcolor=rrggbb; transbg=on|off; align=left|center|right; 
+  size=zzz; maxwidth=yyy;]Text to Render[/DTR]<br>
+  If maxwidth set to 0 then it will dynamically calculate the width [default].</p>
+  <p>Colours are in standard hex, i.e ff0000 will be <font color="#FF0000">red</font>.</p>
+  <?php  
 }
 
 /* get config settings from file */

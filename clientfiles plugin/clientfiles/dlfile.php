@@ -1,5 +1,8 @@
 <?php
-session_start();
+if (!isset($_SESSION))
+{
+    session_start();
+}
 
 # Include common.php
 include('../../admin/inc/common.php');

@@ -2,7 +2,7 @@
 /*
 Plugin Name: Client Files
 Description: a GetSimple CMS plugin or provide password protected client file pages and a back-end to manage them
-Version: 0.3
+Version: 0.4
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
   $thisfile,
   'Client Files',
-  '0.3',
+  '0.4',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'Provides a simple file manager with password protected access areas for Get Simple',
@@ -345,7 +345,10 @@ function clientfiles_delfile($client, $delfile)
 function clientfiles_pagestart()
 {
   //create session for clientpage login
-  session_start();
+  if (!isset($_SESSION))
+  {
+      session_start();
+  }
 }
 
 

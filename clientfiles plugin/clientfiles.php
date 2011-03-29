@@ -2,7 +2,7 @@
 /*
 Plugin Name: Client Files
 Description: a GetSimple CMS plugin or provide password protected client file pages and a back-end to manage them
-Version: 0.4
+Version: 0.5
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
   $thisfile,
   'Client Files',
-  '0.4',
+  '0.5',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'Provides a simple file manager with password protected access areas for Get Simple',
@@ -277,7 +277,7 @@ function clientfiles_filelist($client)
     sort($filearray);
     foreach ($filearray as $clientfile)
     {
-      echo '<tr><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a> <span>' . $clientfile[2] . '</span></td>';
+      echo '<tr><td><a href="../plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a> <span>' . $clientfile[2] . '</span></td>';
       echo '<td><span>' . $clientfile[1] . '</span></td>';
       echo '<td class="delete" width="10px"><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile[0]) . '" title="Delete File">X</a></td></tr>';
     }
@@ -526,7 +526,7 @@ function clientfiles_display($contents)
         sort($filearray);
         foreach ($filearray as $clientfile)
         {
-          $clientfiles_content .= '<tr' . $rowclass . '><td><a href="/plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
+          $clientfiles_content .= '<tr' . $rowclass . '><td><a href="../plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
                                   . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] 
                                   . '</a>&nbsp;' . $clientfile[2] . '</td><td>' . $clientfile[1] . '</td></tr>';
           if ($rowclass=="") {

@@ -2,7 +2,7 @@
 /*
 Plugin Name: SimpleCache
 Description: a simple cache
-Version: 0.6
+Version: 0.7
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $simplecache_thisfile=basename(__FILE__, ".php");
 register_plugin(
   $simplecache_thisfile,
   'SimpleCache',
-  '0.6',
+  '0.7',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'A simple cache for Get Simple',
@@ -331,7 +331,7 @@ function simplecache_manage()
     echo '<form name="status" class="manyinputs" action="load.php?id=simplecache" method="post">';
     echo '<table class="edittable highlight">';
     echo '<tr id="tr-header" >';
-    echo '<th align="center" width="30px">Cache</th>';
+    echo '<th align="center" width="30px">Cache<br />Page?</th>';
     echo '<th width="50%" >Page</th>';
     echo '<th><span>Cache File Date</span></th>';
     echo '<th width="10px"></th>';
@@ -347,14 +347,14 @@ function simplecache_manage()
         if (!in_array($pagedata['slug'], $simplecache_conf['nocache'])) echo ' checked';
         echo '></td>';
         echo '<td width="65%" >';
-        if ($pagedata['parent'] != '') echo '<span>&nbsp;&lfloor;&nbsp;</span>'; //indent
+        if ($pagedata['parent'] != '') echo '<span>&nbsp;&nbsp;–&nbsp;&nbsp;&nbsp;</span>'; //indent
         echo $pagedata['title'] . '</td>';
 
         $simplecache_file = $simplecache_dir . $pagedata['hash'] . ".cache";
         if (file_exists($simplecache_file))
         {
           echo '<td><span>' . date("d M Y H:i:s", filemtime($simplecache_file)) . '</span></td>';
-          echo '<td class="delete" width="10px"><b><a href="' . $_SERVER["REQUEST_URI"] . '&cache_flushpage=' . $pagedata['hash'] . '" title="Delete Page Cache">X</a></b></td>';
+          echo '<td class="delete" width="10px"><b><a class="delconfirm" href="' . $_SERVER["REQUEST_URI"] . '&cache_flushpage=' . $pagedata['hash'] . '" title="Delete Cache of:  ' . $pagedata['title'] . '">X</a></b></td>';
           $pcount++;
         }
         else

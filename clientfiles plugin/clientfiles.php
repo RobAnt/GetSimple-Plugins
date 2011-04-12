@@ -38,8 +38,8 @@ add_filter('content','clientfiles_display');
 function clientfiles_erasedirconf($client=NULL)
 {
   echo '<div style="display: block; text-align: center" class="error">';
-  echo 'Are you sure you want to delete client area <strong>' . $client. '</strong> and all files uploaded for that client?<br>';
-  echo '(This can NOT be undone)<br>';
+  echo 'Are you sure you want to delete client area <strong>' . $client. '</strong> and all files uploaded for that client?<br />';
+  echo '(This can NOT be undone)<br />';
   // Delete file form
   echo '<form name="clientdel" action="load.php?id=clientfiles" method="post">';
   echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
@@ -91,7 +91,7 @@ function clientfiles_newdir($client="", $pass="")
 
   if (($client == "") || ($pass == ""))  // check for blank
   {
-    $message = "Client name or password can not be left blank.<br>";
+    $message = "Client name or password can not be left blank.<br />";
   }
   else
   {
@@ -131,7 +131,6 @@ function clientfiles_checkpass($client="", $hashpass="")
      
     if ($hashpass == $filepass)
     {
-     // set session variables
      $_SESSION['cf_client'] = $client;
      $_SESSION['cf_password'] = $hashpass;
      return TRUE;
@@ -189,7 +188,7 @@ function clientfiles_clientlist()
   // generate client area list:
   if (count($dirarray) == 0)
   {
-    echo 'No client file areas set up.<br>';
+    echo 'No client file areas set up.<br />';
   }
   else
   {
@@ -234,7 +233,7 @@ function clientfiles_clientlist()
 
 function clientfiles_changepass($client)
 {
-  echo 'Set new password for Client <strong>' . $client. '</strong><br>.';
+  echo 'Set new password for Client <strong>' . $client. '</strong><br />.';
   // password form
   echo '<form name="changepass" action="load.php?id=clientfiles" method="post">';
   echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
@@ -314,8 +313,8 @@ function clientfiles_uploadfile($client, $targetfile, $tempfile)
 function clientfiles_delfileconf($client, $delfile)
 {
   echo '<div style="display: block; text-align: center" class="error">';
-  echo 'Are you sure you want to delete file <strong>' . $delfile . '</strong> from <strong>' . $client. '</strong> area?<br>';
-  echo '(This can NOT be undone)<br>';
+  echo 'Are you sure you want to delete file <strong>' . $delfile . '</strong> from <strong>' . $client. '</strong> area?<br />';
+  echo '(This can NOT be undone)<br />';
   // Delete file form
   echo '<form name="clientdelfile" action="load.php?id=clientfiles" method="post">';
   echo '<input type="hidden" name="client" value="' . urlencode($client) . '" />';
@@ -348,6 +347,7 @@ function clientfiles_pagestart()
   if (!isset($_SESSION))
   {
       session_start();
+      session_regenerate_id();
   }
 }
 
@@ -477,13 +477,13 @@ function clientfiles_display($contents)
       $goodlogin = clientfiles_checkpass($_POST['client'],sha1($_POST['pass']));  
       if ($goodlogin === FALSE)
       {
-        $clientfiles_content .= 'Bad Login!<br>';  // message
+        $clientfiles_content .= 'Bad Login!<br />';  // message
       } 
     } 
       
     if ($goodlogin === FALSE)
     {
-      $clientfiles_content .= 'Please log is to view client files.<br>';
+      $clientfiles_content .= 'Please log is to view client files.<br /><br />';
       
       // login form
       $clientfiles_content .= '<form name="login" action="#clientlogin" method="post">';
@@ -497,8 +497,7 @@ function clientfiles_display($contents)
       $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
       $client = $_SESSION['cf_client'];
       $client_dir = $clientfiles_dir . $client  . '/';
-            
-  
+ 
       //
       // display list of client files
       //   
@@ -512,7 +511,18 @@ function clientfiles_display($contents)
           $filearray [] = array($filename, date("Y/m/d H:i:s", filemtime($client_dir.$filename)), '('.clientfiles_format_bytes(filesize($client_dir.$filename)).')');
         }
       }
-      
+
+      //
+      // display client page if it exists - slug is "clientpage_<client name>"
+      //
+      $userpage_file = GSDATAPAGESPATH . "clientpage_" . $client . ".xml";
+      if ( file_exists($userpage_file) )
+      {
+        $userpage_data = getXML($userpage_file);		
+        $clientfiles_content .= stripslashes( html_entity_decode($userpage_data->content, ENT_QUOTES, 'UTF-8') );
+      }
+            
+            
       $clientfiles_content .= '<table id="cf_table">';
       $clientfiles_content .= '<caption>Client: ' . $client . '</caption>';
       $clientfiles_content .= '<thead><tr><th>File</th><th>Date</th></tr></head>';
@@ -549,7 +559,7 @@ function clientfiles_display($contents)
         $clientfiles_content .= "$filecount files";
       }
       $clientfiles_content .= '</td></tr>';
-      $clientfiles_content .= '</tbody></table><br>';  
+      $clientfiles_content .= '</tbody></table><br />';  
              
       // logout form
       $clientfiles_content .= '<form name="logout" action="#clientlogout" method="post">';

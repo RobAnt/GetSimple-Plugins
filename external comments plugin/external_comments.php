@@ -1,10 +1,14 @@
 <?php
 /*
 Plugin Name: External Comments
-Description: Provides external comments support on pages (Disqus IntenseDebate, or Facebook connect)
+Description: Provides external comments support on pages supporting:
+- Disqus 
+- IntenseDebate
+- Livefyre
+- Facebook connect
 Extended to specify optionally override the page information so this call can be used
 in external plugins like the News manager.
-Version: 0.5
+Version: 0.6
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -16,7 +20,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
     $thisfile, 
     'External Comments',     
-    '0.5',         
+    '0.6',         
     'Rob Antonishen',
     'http://ffaat.poweredbyclear.com', 
     'Provides external comments support',
@@ -82,10 +86,12 @@ function return_external_comments($PostID="", $PageURL="", $PageTitle="") {
     $PageTitle=return_page_title();
   }
     
+  $new_content = "\n<!-- START: external_coments plugin embed code -->\n";  
+    
   switch ($external_comments_conf['provider']) 
   {
     case "Disqus":    
-      $new_content = '<div id="disqus_thread"></div>';
+      $new_content .= '<div id="disqus_thread"></div>';
       $new_content .= '<script type="text/javascript">';
       $new_content .= "var disqus_shortname = '" . $external_comments_conf['shortname'] . "';"; 
       $new_content .= "var disqus_developer = '" . $external_comments_conf['developer'] . "';"; 
@@ -105,7 +111,7 @@ INLINECODE;
       break;
     
     case "ID":
-      $new_content = '<script>';
+      $new_content .= '<script>';
       $new_content .= "var idcomments_acct = '" . $external_comments_conf['shortname'] . "';";
       $new_content .= "var idcomments_post_id = '" . $PostID . "';";
       $new_content .= "var idcomments_post_url = '" . $PageURL . "';";
@@ -113,13 +119,21 @@ INLINECODE;
       $new_content .= '<span id="IDCommentsPostTitle" style="display:none"></span>';
       $new_content .= "<script type='text/javascript' src='http://www.intensedebate.com/js/genericCommentWrapperV2.js'></script>";
       break;
+
+    case "livefyre":
+      $new_content .= "<script type='text/javascript' src='http://livefyre.com/wjs/javascripts/livefyre.js'></script>";
+      $new_content .= "<script type='text/javascript'>var fyre = LF({site_id: " . $external_comments_conf['shortname'] . ",version: '1.0' }); </script>";
+      break;
       
     case "facebook":
-      $new_content = '<div id="fb-root"></div>';
+      $new_content .= '<div id="fb-root"></div>';
       $new_content .= '<script src="http://connect.facebook.net/en_US/all.js#appId=APP_ID&amp;xfbml=1"></script>';
       $new_content .= '<fb:comments href="' . $PageURL . '" num_posts="" width=""></fb:comments>';
       break;      
   }
+
+  $new_content .= "\n<!-- END: external_coments plugin embed code -->\n";  
+
   return $new_content;
 }
 
@@ -158,6 +172,9 @@ function external_comments_config() {
   echo '<input type="radio" name="provider" value="ID" ';
   if ($external_comments_conf['provider'] == "ID") echo "checked";
   echo '> Intense Debate<br />';
+  echo '<input type="radio" name="provider" value="livefyre" ';
+  if ($external_comments_conf['provider'] == "livefyre") echo "checked";
+  echo '> Livefyre<br />';
   echo '<input type="radio" name="provider" value="facebook" ';
   if ($external_comments_conf['provider'] == "facebook") echo "checked";
   echo '> Facebook Comments<br /></p>';
@@ -174,6 +191,10 @@ function external_comments_config() {
       break;
     case "ID":
       echo '<p>Your IntenseDebate <i>Site Account</i>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      break;
+    case "livefyre":
+      echo '<p>Your Livefyre <i>Site ID</i>';
       echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
       break;
     case "facebook":

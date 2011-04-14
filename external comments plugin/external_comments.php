@@ -6,9 +6,12 @@ Description: Provides external comments support on pages supporting:
 - IntenseDebate
 - Livefyre
 - Facebook connect
-Extended to specify optionally override the page information so this call can be used
+
+*Can optionally override the page information so this call can be used
 in external plugins like the News manager.
-Version: 0.6
+*Supports i18n language files
+
+Version: 0.8
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -16,11 +19,14 @@ Author URI: http://ffaat.poweredbyclear.com/
 # get correct id for plugin
 $thisfile=basename(__FILE__, ".php");
 
+#load internationalzation
+i18n_merge('external_comments') || i18n_merge('external_comments','en_US');
+
 # register plugin
 register_plugin(
     $thisfile, 
     'External Comments',     
-    '0.6',         
+    '0.8',         
     'Rob Antonishen',
     'http://ffaat.poweredbyclear.com', 
     'Provides external comments support',
@@ -41,7 +47,7 @@ add_action('theme-header','external_comments_header',array());
 function external_comments_header(){
   global $external_comments_conf, $data_index;
 
-  if (strpos($data_index->content, '(% external_comments %)') !== false && $external_comments_conf['provider'] == "facebook")
+  if (strpos($data_index->content, '(% external_comments %)') !== FALSE && $external_comments_conf['provider'] == "facebook")
   {
     echo '<meta property="fb:admins" content="' . $external_comments_conf['shortname'] . '" />'."\n";
   }
@@ -122,7 +128,8 @@ INLINECODE;
 
     case "livefyre":
       $new_content .= "<script type='text/javascript' src='http://livefyre.com/wjs/javascripts/livefyre.js'></script>";
-      $new_content .= "<script type='text/javascript'>var fyre = LF({site_id: " . $external_comments_conf['shortname'] . ",version: '1.0' }); </script>";
+      $new_content .= "<script type='text/javascript'>var fyre = LF({site_id: " . $external_comments_conf['shortname'];
+      $new_content .= ", article_id: '" . $PostID . "', version: '1.0' }); </script>";
       break;
       
     case "facebook":
@@ -158,14 +165,13 @@ function external_comments_config() {
     if (isset($_POST['provider']))
       $external_comments_conf['provider'] = $_POST['provider'];
     external_comments_saveconf();
-    echo '<div style="display: block;" class="updated">Updated settings.</div>';
+    echo '<div style="display: block;" class="updated">' . i18n_r("external_comments/MSG_UPDATED") . '.</div>';
   }
-
   
-  echo "<label>External Comments Configuration</label><br/><br/>";
+  echo "<label>" . i18n_r("external_comments/PLUGINTITLE") . "</label><br/><br/>";
   echo '<form name="settings" action="load.php?id=external_comments" method="post">';
   
-  echo '<p>External Comment Service:<br />';
+  echo '<p>' . i18n_r("external_comments/LBL_SERVICE") . ':<br />';
   echo '<input type="radio" name="provider" value="Disqus" ';
   if ($external_comments_conf['provider'] == "Disqus") echo "checked";
   echo '> Disqus<br />';
@@ -179,34 +185,33 @@ function external_comments_config() {
   if ($external_comments_conf['provider'] == "facebook") echo "checked";
   echo '> Facebook Comments<br /></p>';
 
-  echo "<input name='submit_settings' class='submit' type='submit' value='Update External Comment Provider'><br /><br /><br />";
+  echo "<input name='submit_settings' class='submit' type='submit' value='" . i18n_r("external_comments/BTN_SERVICE") . "'><br /><br /><br />";
     
   switch ($external_comments_conf['provider']) {
     case "Disqus":
-      echo '<p>Your Disqus <i>Forum Shortname</i>';
+      echo '<p>' . i18n_r("external_comments/LBL_DISQUSID") . ':';
       echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
       echo '<p><input name="developer" type="checkbox" value="Y"';
       if ($external_comments_conf['developer'] == 1) echo ' checked';
-      echo '>&nbsp; Developer Mode: testing the system on an inaccessible website, e.g. secured staging server or a local environment.</p><br />';
+      echo '>&nbsp; ' . i18n_r("external_comments/LBL_DISQUSDEV") . '</p><br />';
       break;
     case "ID":
-      echo '<p>Your IntenseDebate <i>Site Account</i>';
+      echo '<p>' . i18n_r("external_comments/LBL_IDID") . ':';
       echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
       break;
     case "livefyre":
-      echo '<p>Your Livefyre <i>Site ID</i>';
+      echo '<p>' . i18n_r("external_comments/LBL_LIVEFYREID") . ':';
       echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
       break;
     case "facebook":
-      echo '<p>Your Facebook <i>UserID</i> (needed for moderation)';
+      echo '<p>' . i18n_r("external_comments/LBL_FACEBOOKID") . ':';
       echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
       break;
   }
       
-  echo "<input name='submit_settings' class='submit' type='submit' value='Save Settings'><br />";
+  echo "<input name='submit_settings' class='submit' type='submit' value='" . i18n_r("external_comments/BTN_SAVE") . "'><br />";
   echo '</form>';
-  echo '<p /><p><i>Enable comments on a single page by adding the tag <b>(% external_comments %)</b> in that page.<br />';
-  echo 'Alternately insert <b>&lt?php get_external_comments(); ?&gt</b> in your page template to have comments for all pages.</i></p>';
+  echo '<p /><p><i>' . i18n_r("external_comments/PLUGINHELP") . '</i></p>';
 }
 
 /* get config settings from file */
@@ -217,24 +222,31 @@ function external_comments_loadconf()
   if (!file_exists($configfile))
   {
     //default settings
-    $xmlstr = "<?xml version='1.0'?><settings><provider>Disqus</provider><developer>0</developer><shortname></shortname></settings>";
-    $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
-    // save the contents of output buffer to the file
-    fwrite($fp, $xmlstr);
-    // close the file
-    fclose($fp);
+    $xml_root = new SimpleXMLElement('<settings><provider>Disqus</provider><developer>0</developer><shortname></shortname></settings>');
+    if ($xml_root->asXML($configfile) === FALSE)
+    {
+	  exit(i18n_r("external_comments/MSG_SAVEERROR") . ' ' . $configfile . ', ' . i18n_r("external_comments/MSG_CHECKPRIV"));
+    }
+    if (defined('GSCHMOD')) 
+    {
+	  chmod($file, GSCHMOD);
+    } 
+    else 
+    {
+      chmod($file, 0755);
+    }
   }
 
-  $fp = @fopen($configfile,"r");
-  $xmlvals = getXML($configfile);
-  fclose($fp);
-
-  $node = $xmlvals->children();
-
-  $vals['provider'] = (string)$node->provider;
-  $vals['developer'] = (int)$node->developer;
-  $vals['shortname'] = (string)$node->shortname;
+  $xml_root = simplexml_load_file($configfile);
   
+  if ($xml_root !== FALSE)
+  {
+    $node = $xml_root->children();
+  
+    $vals['provider'] = (string)$node->provider;
+    $vals['developer'] = (int)$node->developer;
+    $vals['shortname'] = (string)$node->shortname;
+  }
   return($vals);
 }
 
@@ -244,17 +256,15 @@ function external_comments_saveconf()
   global $external_comments_conf;
   $configfile=GSDATAOTHERPATH."external_comments.xml";
 
-  $xmlstr = '<?xml version=\'1.0\'?><settings>';
-  $xmlstr .= "<provider>" . $external_comments_conf['provider'] . "</provider>";
-  $xmlstr .= "<developer>" . $external_comments_conf['developer'] . "</developer>";
-  $xmlstr .= "<shortname>" . $external_comments_conf['shortname'] . "</shortname>";
-  $xmlstr .= "</settings>";
-
-  $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
-  // save the contents of output buffer to the file
-  fwrite($fp, $xmlstr);
-  // close the file
-  fclose($fp);
+  $xml_root = new SimpleXMLElement('<settings></settings>');
+  $xml_root->addchild('provider', $external_comments_conf['provider']);
+  $xml_root->addchild('developer', $external_comments_conf['developer']);
+  $xml_root->addchild('shortname', $external_comments_conf['shortname']);
+  
+  if ($xml_root->asXML($configfile) === FALSE)
+  {
+	exit(i18n_r("external_comments/MSG_SAVEERROR") . ' ' . $configfile . ', ' . i18n_r("external_comments/MSG_CHECKPRIV"));
+  }
 }
 
 ?>

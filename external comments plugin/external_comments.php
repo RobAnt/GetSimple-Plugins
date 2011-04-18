@@ -154,8 +154,8 @@ INLINECODE;
 function external_comments_config() {
   global $external_comments_conf;
   
-  /* Save Settings */
-  if (isset($_POST['submit_settings'])) {
+  if (isset($_POST) && sizeof($_POST)>0) {
+    /* Save Settings */
     if (isset($_POST['developer'])) {
       $external_comments_conf['developer'] = 1;
     } else {
@@ -167,47 +167,55 @@ function external_comments_config() {
     if (isset($_POST['provider'])) {
       $external_comments_conf['provider'] = $_POST['provider'];
     }
-
     external_comments_saveconf();
     echo '<div style="display: block;" class="updated">' . i18n_r('external_comments/MSG_UPDATED') . '.</div>';
   }
-  
-  echo '<label>' . i18n_r('external_comments/PLUGINTITLE') . '</label><br/><br/>';
+
+  echo '<h3 class="floated">' . i18n_r('external_comments/PLUGINTITLE') . '</h3><br/><br/>';
   echo '<form name="settings" action="load.php?id=external_comments" method="post">';
   
-  echo '<p>' . i18n_r('external_comments/LBL_SERVICE') . ':<br />';
-  echo '<input type="radio" name="provider" value="Disqus" ';
-  if ($external_comments_conf['provider'] == 'Disqus') {
-    echo 'checked';
-  }
-  echo '> Disqus<br />';
-  echo '<input type="radio" name="provider" value="ID" ';
-  if ($external_comments_conf['provider'] == 'ID') {
-    echo 'checked';
-  }
-  echo '> Intense Debate<br />';
-  echo '<input type="radio" name="provider" value="livefyre" ';
-  if ($external_comments_conf['provider'] == 'livefyre') {
-    echo 'checked';
-  }
-  echo '> Livefyre<br />';
-  echo '<input type="radio" name="provider" value="vk" ';
-  if ($external_comments_conf['provider'] == 'vk') {
-    echo 'checked';
-  }
-  echo '> VK<br />';
-  echo '<input type="radio" name="provider" value="facebook" ';
-  if ($external_comments_conf['provider'] == 'facebook') {
-    echo 'checked';
-  }
-  echo '> Facebook Comments<br /></p>';
+  echo '<label>' . i18n_r('external_comments/LBL_SERVICE') . ':</label><p>';
+  
+  echo '<select name="provider" onChange="settings.submit();">';
 
-  echo "<input name='submit_settings' class='submit' type='submit' value='" . i18n_r('external_comments/BTN_SERVICE') . "'><br /><br /><br />";
-    
+  echo '<option value="Disqus"';
+  if ($external_comments_conf['provider'] == 'Disqus') {
+    echo ' selected="selected" ';
+  }
+  echo '>Disqus</option>';
+  
+  echo '<option value="ID"';
+  if ($external_comments_conf['provider'] == 'ID') {
+    echo ' selected="selected" ';
+  }
+  echo '>Intense Debate</option>';
+
+  echo '<option value="livefyre"';
+  if ($external_comments_conf['provider'] == 'livefyre') {
+    echo ' selected="selected" ';
+  }
+  echo '>Livefyre</option>';
+
+  echo '<option value="vk"';
+  if ($external_comments_conf['provider'] == 'vk') {
+    echo ' selected="selected" ';
+  }
+  echo '>VK</option>';
+
+  echo '<option value="facebook"';
+  if ($external_comments_conf['provider'] == 'facebook') {
+    echo ' selected="selected" ';
+  }
+  echo '>Facebook Comments</option>';
+
+  echo '</select>';
+  
+  echo '<br /><br />';
+  
   switch ($external_comments_conf['provider']) {
     case 'Disqus':
-      echo '<p>' . i18n_r('external_comments/LBL_DISQUSID') . ':';
-      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      echo '<label>' . i18n_r('external_comments/LBL_DISQUSID') . ':</label>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'">';      
       echo '<p><input name="developer" type="checkbox" value="Y"';
       if ($external_comments_conf['developer'] == 1) {
         echo ' checked';
@@ -216,29 +224,29 @@ function external_comments_config() {
       break;
     
     case 'ID':
-      echo '<p>' . i18n_r('external_comments/LBL_IDID') . ':';
-      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      echo '<label>' . i18n_r('external_comments/LBL_IDID') . ':</label>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'">';      
       break;
       
     case 'livefyre':
-      echo '<p>' . i18n_r('external_comments/LBL_LIVEFYREID') . ':';
-      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      echo '<label>' . i18n_r('external_comments/LBL_LIVEFYREID') . ':</label>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'">';      
       break;
       
     case 'vk':
-      echo '<p>' . i18n_r('external_comments/LBL_VKID') . ':';
-      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      echo '<label>' . i18n_r('external_comments/LBL_VKID') . ':</label><p>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'">';      
       break;
       
     case 'facebook':
-      echo '<p>' . i18n_r('external_comments/LBL_FACEBOOKID') . ':';
-      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'"></p>';      
+      echo '<label>' . i18n_r('external_comments/LBL_FACEBOOKID') . ':</label>';
+      echo '<input name="shortname" type="text" size="90" value="'.$external_comments_conf['shortname'] .'">';      
       break;
   }
       
   echo "<input name='submit_settings' class='submit' type='submit' value='" . i18n_r('external_comments/BTN_SAVE') . "'><br />";
   echo '</form>';
-  echo '<p /><p><i>' . i18n_r('external_comments/PLUGINHELP') . '</i></p>';
+  echo '<br /><p><i>' . i18n_r('external_comments/PLUGINHELP') . '</i></p>';
 }
 
 /* get config settings from file */

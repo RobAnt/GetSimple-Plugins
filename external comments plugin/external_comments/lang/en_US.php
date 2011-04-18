@@ -11,6 +11,7 @@ $i18n = array(
   'LBL_DISQUSDEV'  => 'Developer Mode: testing the system on an inaccessible website, e.g. secured staging server or a local environment.',
   'LBL_IDID'       => 'Your IntenseDebate Site Account',
   'LBL_LIVEFYREID' => 'Your Livefyre Site ID',
+  'LBL_VKID'       => 'Your VK apiId',
   'LBL_FACEBOOKID' => 'Your Facebook UserID',
   'BTN_SERVICE'    => 'Update External Comment Service',
   'BTN_SAVE'       => 'Save Settings',

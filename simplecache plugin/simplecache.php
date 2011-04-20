@@ -169,52 +169,52 @@ function simplecache_saveconf() {
 
   $configfile=GSDATAOTHERPATH . 'simplecache.xml';
 
-  $xmlstr = "<?xml version='1.0'?><simplecachesettings>";
-  $xmlstr .= '<enabled>' . $simplecache_conf['enabled'] . '</enabled>';
-  $xmlstr .= '<ttl>' . $simplecache_conf['ttl'] . '</ttl>';
-  $xmlstr .= '<nocache>';
+  $xml_root = new SimpleXMLElement('<simplecachesettings></simplecachesettings>');
+  $xml_root->addchild('enabled', $simplecache_conf['enabled']);
+  $xml_root->addchild('ttl', $simplecache_conf['ttl']);
+  $nocache = $xml_root->addchild('nocache');
   foreach ($simplecache_conf['nocache'] as $slug) {
-    $xmlstr .= '<slug>' . $slug . '</slug>';
+    $nocache->addchild('slug', $slug);
   }
-  $xmlstr .= '</nocache>';
-  $xmlstr .= '</simplecachesettings>';
-
-  $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
-  // save the contents of output buffer to the file
-  fwrite($fp, $xmlstr);
-  // close the file
-  fclose($fp);
+    
+  if ($xml_root->asXML($configfile) === FALSE) {
+	exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
+  }
 }
 
 /* get config settings from file */
 function simplecache_loadconf() {
   $vals=array();
   $configfile=GSDATAOTHERPATH . 'simplecache.xml';
+  
+  /*create new file if none exists */
   if (!file_exists($configfile)) {
     //default settings
-    $xmlstr = "<?xml version='1.0'?><simplecachesettings><enabled>Y</enabled><ttl>60</ttl><nocache></nocache></simplecachesettings>";
-    $fp = fopen($configfile, 'w') or exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
-    // save the contents of output buffer to the file
-    fwrite($fp, $xmlstr);
-    // close the file
-    fclose($fp);
+    $xml_root = new SimpleXMLElement('<simplecachesettings><enabled>Y</enabled><ttl>60</ttl><nocache></nocache></simplecachesettings>');
+    if ($xml_root->asXML($configfile) === FALSE) {
+	  exit('Unable to save ' . $configfile . ', check GetSimple privileges.');
+    }
+    if (defined('GSCHMOD')) {
+	  chmod($configfile, GSCHMOD);
+    } else {
+      chmod($configfile, 0755);
+    }
   }
-
-  $fp = @fopen($configfile, 'r');
-  $xmlvals = getXML($configfile);
-  fclose($fp);
-
-  $node = $xmlvals->children();
-
-  $vals['enabled'] = (string)$node->enabled;
-  $vals['ttl'] = (int)(string)$node->ttl;
-
-  $subnode = $node->nocache->children();
-  $vals['nocache'] = array();
-  foreach($subnode->slug as $slug) {
-    $vals['nocache'][] = (string)$slug;
+  
+  $xml_root = simplexml_load_file($configfile);
+  if ($xml_root !== FALSE) {
+    $node = $xml_root->children();
+  
+    $vals['enabled'] = (string)$node->enabled;
+    $vals['ttl'] = (int)$node->ttl;
+    
+    $sluglist = $node->nocache->children();
+    $vals['nocache'] = array();
+    foreach($sluglist->slug as $slug) {
+      $vals['nocache'][] = (string)$slug;
+    }    
   }
-
+  
   return($vals);
 }
 
@@ -235,7 +235,7 @@ function simplecache_manage() {
     $pagearray = simplecache_pagelist();
 
     /********** post/get checks **********/
-    if ((isset($_GET['cache_flush'])) && ($_GET['cache_flush'] == "Y")) {
+    if ((isset($_GET['cache_flush'])) && ($_GET['cache_flush'] == 'Y')) {
       // cache flush requested
       simplecache_flushall();
       $message = 'All cache files deleted.';
@@ -340,9 +340,9 @@ function simplecache_manage() {
     echo "<input name='submit_perpage' class='submit' type='submit' value='Update per-page caching'>\n";
 
     //delete all cached pages button
-    echo "<input name='flush' class='submit' style='float: right;' type='button' value='Delete all cache files' ";
+    echo '<input name="flush" class="submit" style="float: right;" type="button" value="Delete all cache files" ';
     if($pcount == 0) {
-      echo " disabled ";
+      echo ' disabled ';
     }
     echo 'onclick="window.location.href=' . "'" . $_SERVER['REQUEST_URI'] . "&cache_flush=Y'" . '">';
     echo "</form>\n";
@@ -351,7 +351,7 @@ function simplecache_manage() {
     echo '<br/><br/><h3 class="floated">SimpleCache Settings</h3><br/><br/>';
     echo '<form name="settings" class="manyinputs" action="load.php?id=simplecache" method="post">';
     echo '<input type="checkbox" name="enabled" value="Y"';
-    if ($simplecache_conf['enabled'] == "Y") {
+    if ($simplecache_conf['enabled'] == 'Y') {
       echo ' checked';
     }
     echo '>&nbsp; SimpleCache page caching enabled.<br /><br />';

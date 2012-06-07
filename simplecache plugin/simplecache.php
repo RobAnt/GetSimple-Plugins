@@ -2,7 +2,7 @@
 /*
 Plugin Name: SimpleCache
 Description: a simple cache
-Version: 0.8
+Version: 0.9
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, '.php');
 register_plugin(
   $thisfile,
   'SimpleCache',
-  '0.8',
+  '0.9',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'A simple cache for Get Simple',
@@ -140,26 +140,30 @@ function simplecache_pagelist() {
   $filenames = getFiles($path);
   $count="0";
   $pagesArray = array();
+   
   if (count($filenames) != 0) {
     foreach ($filenames as $file) {
       if (isFile($file, $path, 'xml')) {
         $data = getXML($path .$file);
-        $pagesArray[$count]['title'] = stripslashes(html_entity_decode($data->title, ENT_QUOTES, 'UTF-8'));
-        $pagesArray[$count]['parent'] = $data->parent;
-        if ($data->parent != '') {
-          $parentdata = getXML($path . $data->parent .'.xml');
-          $parentTitle = stripslashes(html_entity_decode($parentdata->title, ENT_QUOTES, 'UTF-8'));
-          $pagesArray[$count]['sort'] = $parentTitle .' '. $data->title;
-        } else {
-          $pagesArray[$count]['sort'] = $data->title;
+        $pagesArray[$count]['title'] = (string)html_entity_decode($data->title, ENT_QUOTES, 'UTF-8');
+        $pagesArray[$count]['parent'] = (string)$data->parent;
+        
+        $pagesArray[$count]['sort'] = (string)$data->title;
+        $parent = (string)$data->parent;
+        while ($parent != '') {
+          $parentdata = getXML($path . $parent .'.xml');
+          $parentTitle = (string)$parentdata->title;
+          $pagesArray[$count]['sort'] = $parentTitle .'^'. $pagesArray[$count]['sort'];
+          $parent = (string)$parentdata->parent;
         }
-        $pagesArray[$count]['slug'] = $data->url;
+        $pagesArray[$count]['slug'] = (string)$data->url;
         $pagesArray[$count]['hash'] = md5((string)$data->url);
         $parentTitle = '';
         $count++;
       }
     }
   }
+  
   return(subval_sort($pagesArray, 'sort'));
 }
 
@@ -320,7 +324,7 @@ function simplecache_manage() {
         echo '></td>';
         echo '<td width="65%" >';
         if ($pagedata['parent'] != '') {
-          echo '<span>&nbsp;&lfloor;&nbsp;</span>'; //indent
+          echo '<span>' . str_repeat('&nbsp;', 5 * (substr_count($pagedata['sort'],'^') - 1)) . '&ndash&nbsp;&nbsp;</span>'; //indent
         }
         echo $pagedata['title'] . '</td>';
 

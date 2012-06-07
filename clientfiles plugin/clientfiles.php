@@ -2,7 +2,7 @@
 /*
 Plugin Name: Client Files
 Description: a GetSimple CMS plugin or provide password protected client file pages and a back-end to manage them
-Version: 0.5
+Version: 0.8
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -14,7 +14,7 @@ $thisfile=basename(__FILE__, ".php");
 register_plugin(
   $thisfile,
   'Client Files',
-  '0.5',
+  '0.8',
   'Rob Antonishen',
   'http://ffaat.poweredbyclear.com/',
   'Provides a simple file manager with password protected access areas for Get Simple',
@@ -84,20 +84,24 @@ function clientfiles_erasedir($client=NULL)
   }
 }
 
-function clientfiles_newdir($client="", $pass="")
-{
-  $message = "";
-  $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
+function clientfiles_newdir($client='', $pass='') {
+  $message = '';
+  $clientfiles_dir = GSDATAOTHERPATH . 'clientfiles/';
 
   if (($client == "") || ($pass == ""))  // check for blank
   {
-    $message = "Client name or password can not be left blank.<br />";
+    $message .= 'Client name or password can not be left blank.';
   }
-  else
-  {
+  if (ctype_alnum($client)===FALSE) {
+    $message .= 'Client name must be alpha-numeric (a-z, Z-Z, 0-9).';
+  }
+  if (ctype_graph($pass)===FALSE) {
+    $message .= 'Password must contain only printable characters.';
+  }  
+  if ($message == '') {
     if (!is_dir($clientfiles_dir . $client . '/'))  // new dir - create it
     {
-      $message = "Created client " . $client;
+      $message = 'Created client area <b>' . $client . '</b>';
       if (!mkdir($clientfiles_dir . $client . '/'))
       {
         exit('Failed to create client folder...');
@@ -105,24 +109,27 @@ function clientfiles_newdir($client="", $pass="")
     }
     else
     {
-      $message = "Updated client " . $client . " password.";
+      $message = 'Updated client ' . $client . ' password.';
     }
     $pass = sha1($pass);
     $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
-    $fh = fopen($passfile, 'w') or die("can't create password file");
+    $fh = fopen($passfile, 'w') or exit('Failed to create client password file');
     fwrite($fh, $pass);
     fclose($fh);
     
   }
-  if ($message!="") echo '<div style="display: block;" class="updated">' . $message . '</div>';
+  if ($message != '') {
+    echo '<div style="display: block;" class="updated">' . $message . '</div>';
+  }
   return;
 }
 
-function clientfiles_checkpass($client="", $hashpass="")
+function clientfiles_checkpass($client='', $hashpass='')
 {
   // check for client folder
   $clientfiles_dir = GSDATAOTHERPATH.'clientfiles/';
-  if (($client != "") && (is_dir($clientfiles_dir . $client . '/')) && (is_file($clientfiles_dir . $client . '/.cfpassword')))
+  if (($client != '') && (ctype_alnum($client)===TRUE) && (ctype_graph($hashpass)===TRUE)
+  && (is_dir($clientfiles_dir . $client . '/')) && (is_file($clientfiles_dir . $client . '/.cfpassword')))
   {
     $passfile = $clientfiles_dir . $client . '/' . '.cfpassword';
     $fh = fopen($passfile, 'r') or die("can't read password file");
@@ -229,6 +236,11 @@ function clientfiles_clientlist()
   echo '&nbsp;&nbsp;Password: <input type="password" class="short text" style="width: 150px" name="pass" value="">';
   echo '&nbsp;&nbsp;<input type="submit" class="submit" name="submitclientnew" value="New Client Area" />';
   echo '</form>';
+
+  // Instructions on creating a page for the client
+  echo '<br /><p>Optionally create a private page with the slug <i>clientpage_[client name]</i> and ';
+  echo 'the contents of this page will be displayed before the list of client files, once the client is logged in.</p>';
+  echo '<p>For example, for a client named <i>bob</i> create a page with the slug <i>clientpage_bob</i> and its content will be shown when bob logs in.</p>';
 }
 
 function clientfiles_changepass($client)
@@ -246,6 +258,7 @@ function clientfiles_changepass($client)
 
 function clientfiles_filelist($client)
 {
+  global $SITEURL;
   //
   // display list of client files
   //
@@ -276,7 +289,7 @@ function clientfiles_filelist($client)
     sort($filearray);
     foreach ($filearray as $clientfile)
     {
-      echo '<tr><td><a href="../plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a> <span>' . $clientfile[2] . '</span></td>';
+      echo '<tr><td><a href="' . $SITEURL . 'plugins/clientfiles/dlfile.php?client=' . urlencode($client) . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] . '</a> <span>' . $clientfile[2] . '</span></td>';
       echo '<td><span>' . $clientfile[1] . '</span></td>';
       echo '<td class="delete" width="10px"><a href="load.php?id=clientfiles' . '&manageclient=' . urlencode($client) . '&delfile=' . urlencode($clientfile[0]) . '" title="Delete File">X</a></td></tr>';
     }
@@ -446,8 +459,16 @@ function clientfiles_manage()
 ***********************************************************************************/
 function clientfiles_display($contents)
 {  
+  global $SITEURL;
+  global $url;
+  global $parent;
+  global $PRETTYURLS;
+  
   $tmp_content = $contents;
 
+  /* Set this to control the number of items per page to display to the logged in client*/
+  $perpage = 5;
+  
   $location = stripos($tmp_content,"(% clientfiles %)");
     
   if ($location !== FALSE)
@@ -477,7 +498,7 @@ function clientfiles_display($contents)
       $goodlogin = clientfiles_checkpass($_POST['client'],sha1($_POST['pass']));  
       if ($goodlogin === FALSE)
       {
-        $clientfiles_content .= 'Bad Login!<br />';  // message
+        $clientfiles_content .= 'Incorrect Login!<br /><br />';  // message
       } 
     } 
       
@@ -510,19 +531,38 @@ function clientfiles_display($contents)
         {
           $filearray [] = array($filename, date("Y/m/d H:i:s", filemtime($client_dir.$filename)), '('.clientfiles_format_bytes(filesize($client_dir.$filename)).')');
         }
+	  }
+	  
+	  
+      // paginate the list
+      if (isset($_GET['cfpage']))
+      {
+        $cfpage = (int)$_GET['cfpage'];
       }
-
+      else
+      {
+        $cfpage = 0;
+      }
+  
+      $cfpage = max(0, min($cfpage, floor((count($filearray)-1)/$perpage)));  
+      $fullcount = count($filearray);
+      $filearray = array_slice($filearray , $cfpage*$perpage , $perpage);
+        
+	  //
+      // display client page if it exists - slug must be same as the client name, page set to Private, 
+      // and be a child of the page the clientfil plugin is displayed on.
       //
-      // display client page if it exists - slug is "clientpage_<client name>"
-      //
-      $userpage_file = GSDATAPAGESPATH . "clientpage_" . $client . ".xml";
+      $userpage_file = GSDATAPAGESPATH . $client . '.xml';
       if ( file_exists($userpage_file) )
       {
-        $userpage_data = getXML($userpage_file);		
-        $clientfiles_content .= stripslashes( html_entity_decode($userpage_data->content, ENT_QUOTES, 'UTF-8') );
+        $userpage_data = getXML($userpage_file);
+
+        if ( ((string)$userpage_data->private=='Y') && ((string)$userpage_data->parent==return_page_slug()) )
+        {
+          $clientfiles_content .= stripslashes( html_entity_decode($userpage_data->content, ENT_QUOTES, 'UTF-8') );
+        }
       }
-            
-            
+         
       $clientfiles_content .= '<table id="cf_table">';
       $clientfiles_content .= '<caption>Client: ' . $client . '</caption>';
       $clientfiles_content .= '<thead><tr><th>File</th><th>Date</th></tr></head>';
@@ -536,9 +576,9 @@ function clientfiles_display($contents)
         sort($filearray);
         foreach ($filearray as $clientfile)
         {
-          $clientfiles_content .= '<tr' . $rowclass . '><td><a href="../plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
-                                  . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] 
-                                  . '</a>&nbsp;' . $clientfile[2] . '</td><td>' . $clientfile[1] . '</td></tr>';
+          $clientfiles_content .= '<tr' . $rowclass . '><td><a href="' . $SITEURL . 'plugins/clientfiles/dlfile.php?client=' . urlencode($client) 
+                               . '&getfile=' . urlencode($clientfile[0]) . '" title="Download File">' . $clientfile[0] 
+                               . '</a>&nbsp;' . $clientfile[2] . '</td><td>' . $clientfile[1] . '</td></tr>';
           if ($rowclass=="") {
             $rowclass=' class="alt"';
           }
@@ -550,21 +590,60 @@ function clientfiles_display($contents)
       }      
 
       $clientfiles_content .= '<tr' . $rowclass . '><td colspan="2">';
-      if ($filecount==1)
+      if ($fullcount==1)
       {
-        $clientfiles_content .= "$filecount file";
+        $clientfiles_content .= "$fullcount file";
       }
       else
       {
-        $clientfiles_content .= "$filecount files";
+        $clientfiles_content .= "$fullcount files";
       }
       $clientfiles_content .= '</td></tr>';
+      
+	  // generate pagination   
+      if (floor(($fullcount-1)/$perpage) > 0)
+      {   
+        if ($rowclass=="") {
+          $rowclass=' class="alt"';
+        }
+        else
+        {
+          $rowclass="";
+        }
+	  
+        $thispage = find_url($url, $parent) . ((string)$PRETTYURLS==="1") ? '?' : '&';
+
+        $clientfiles_content .= '<tr' . $rowclass . '>';	  
+        if ($cfpage>0)
+        {
+          $clientfiles_content .= '<td><a href="' . $thispage . 'cfpage=' . ($cfpage-1) . '">&lt Previous Page</a></td>';	  
+        }
+        else
+        {
+          $clientfiles_content .= '<td></td>';
+        }
+	  
+        if (floor(($fullcount-1)/$perpage) > $cfpage)
+        {
+          $clientfiles_content .= '<td align="right"><a href="' . $thispage . 'cfpage=' . ($cfpage+1) . '">Next Page &gt</a></td>';	
+        }
+        else
+        {
+          $clientfiles_content .= '<td></td>';
+        }
+	  
+        $clientfiles_content .= '</tr>';
+      }	
       $clientfiles_content .= '</tbody></table><br />';  
              
       // logout form
       $clientfiles_content .= '<form name="logout" action="#clientlogout" method="post">';
       $clientfiles_content .= '<input type="submit" name="submitlogout" value="Client Log Out" />';
-      $clientfiles_content .= '</form></br>';        
+      $clientfiles_content .= '</form></br>';
+
+#Uncomment this line if you want to use the external comment plugin on a per-client basis
+#      $clientfiles_content .= return_external_comments( return_page_slug() . ':' . $client, get_page_url(True) . '?client=' . $client, return_page_title(). ' ' . $client);
+      
     }
     
     // build page

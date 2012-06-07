@@ -12,7 +12,7 @@ in external plugins like the News manager.
 *Supports i18n language files
 *Russian and German translations provided (Thanks Oleg and Connie)
 
-Version: 0.8
+Version: 0.9
 Author: Rob Antonishen
 Author URI: http://ffaat.poweredbyclear.com/
 */
@@ -27,7 +27,7 @@ i18n_merge('external_comments') || i18n_merge('external_comments','en_US');
 register_plugin(
     $thisfile, 
     'External Comments',     
-    '0.8',         
+    '0.9',         
     'Rob Antonishen',
     'http://ffaat.poweredbyclear.com', 
     'Provides external comments support',
@@ -91,7 +91,10 @@ function return_external_comments($PostID='', $PageURL='', $PageTitle='') {
   if ($PageTitle=='') {
     $PageTitle=return_page_title();
   }
-    
+  $PostID = addslashes($PostID);
+  $PageURL = addslashes($PageURL);
+  $PageTitle = addslashes($PageTitle);
+  
   $new_content = "\n<!-- START: external_coments plugin embed code -->\n";  
     
   switch ($external_comments_conf['provider']) {

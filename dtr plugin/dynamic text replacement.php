@@ -200,7 +200,7 @@ function dtr_config() {
   echo '<select name="align">';
   foreach ($alignlist as $align)
   {
-    if ($font == $dtr_conf['align'])
+    if ($align == $dtr_conf['align'])
 	  echo '<option value="' . $align . '" selected="selected">' . $align . "</option>";
 	else
 	  echo '<option value="' . $align . '">' . $align . "</option>";
